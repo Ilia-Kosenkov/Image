@@ -2,15 +2,14 @@
 using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Image
 {
-    public class Image<T> : IImmutableImage<T> where T : unmanaged
+    public abstract class Image 
     {
-        private readonly T[] _data;
-
         public static IImmutableList<Type> AllowedTypes { get; } =
-        new[] 
+            new[] 
             {
                 typeof(double),
                 typeof(float),
@@ -21,6 +20,14 @@ namespace Image
                 typeof(short),
                 typeof(int),
             }.ToImmutableList();
+    }
+
+    public class Image<T> : Image, IImmutableImage<T> where T 
+        : unmanaged, IComparable<T>
+    {
+        private readonly T[] _data;
+        private T? _max;
+        private T? _min;
 
         public int Height { get; }
         public int Width { get; }
@@ -46,13 +53,13 @@ namespace Image
             Height = height;
         }
 
-        public unsafe Image(ReadOnlySpan<byte> byteData, int width, int height)
+        public Image(ReadOnlySpan<byte> byteData, int width, int height)
         {
             ThrowIfTypeMismatch();
 
             if (width < 1)
                 throw new ArgumentOutOfRangeException(nameof(width));
-            if (width < 1)
+            if (height < 1)
                 throw new ArgumentOutOfRangeException(nameof(height));
 
             var size = Unsafe.SizeOf<T>();
@@ -62,24 +69,47 @@ namespace Image
                 throw new ArgumentException();
 
             _data = new T[width * height];
-            
-            fixed (void* dataPtr = &_data[0])
-                fixed(void* srcPtr = byteData)
-                    Unsafe.CopyBlock(dataPtr, srcPtr, (uint)byteData.Length);
-            
+
+
+            if (!MemoryMarshal.Cast<byte, T>(byteData).TryCopyTo(_data))
+                throw new InvalidOperationException();
+
+            Width = width;
+            Height = height;
         }
 
-        
-       
+      
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public T Max()
         {
-            throw new NotImplementedException();
+            if (_max is null)
+            {
+                var temp = default(T);
+                foreach (var item in _data)
+                    if (item.CompareTo(temp) >= 0)
+                        temp = item;
+
+                _max = temp;
+            }
+
+            return _max.Value;
         }
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public T Min()
         {
-            throw new NotImplementedException();
+            if (_min is null)
+            {
+                var temp = default(T);
+                foreach (var item in _data)
+                    if (item.CompareTo(temp) <= 0)
+                        temp = item;
+
+                _min = temp;
+            }
+
+            return _min.Value;
         }
 
         public double Percentile(T lvl)
@@ -87,22 +117,23 @@ namespace Image
             throw new NotImplementedException();
         }
 
+        public ReadOnlySpan<byte> GetByteView()
+            => MemoryMarshal.Cast<T, byte>(new ReadOnlySpan<T>(_data));
+
         public IImmutableImage<T> Copy()
-        {
-            throw new NotImplementedException();
-        }
+            => new Image<T>(_data, Width, Height);
 
         public IImmutableImage<T> Transpose()
         {
             throw new NotImplementedException();
         }
 
-        public IImmutableImage<TOther> CastTo<TOther>() where TOther : unmanaged
+        public IImmutableImage<TOther> CastTo<TOther>() where TOther : unmanaged, IComparable<TOther>
         {
             throw new NotImplementedException();
         }
 
-        public IImmutableImage<TOther> CastTo<TOther>(Func<T, TOther> caster) where TOther : unmanaged
+        public IImmutableImage<TOther> CastTo<TOther>(Func<T, TOther> caster) where TOther : unmanaged, IComparable<TOther>
         {
             throw new NotImplementedException();
         }
@@ -117,15 +148,34 @@ namespace Image
             throw new NotImplementedException();
         }
 
-        public bool Equals(OldImage other)
+        public bool Equals(IImmutableImage<T> other)
         {
-            throw new NotImplementedException();
+            if (other is null || Width != other.Width || Height != other.Height)
+                return false;
+
+            // WATCH: Possible optimization
+            return GetByteView().SequenceEqual(other.GetByteView());
         }
 
-        public object Clone()
-        {
-            throw new NotImplementedException();
-        }
+        public bool Equals(IImmutableImage other)
+            => other is IImmutableImage<T> img
+               && Equals(img);
+        
+
+
+        public object Clone() => Copy();
+
+
+        double IImmutableImage.Min() => (double)Convert.ChangeType(Min(), typeof(double));
+        double IImmutableImage.Max() => (double)Convert.ChangeType(Max(), typeof(double));
+
+        public override bool Equals(object obj)
+            => obj is IImmutableImage<T> other
+               && Equals(other);
+
+        // TODO : Fix poor hash function
+        public override int GetHashCode()
+            => _data.GetHashCode() ^ ((Width << 16 ) ^ Height);
 
         private static void ThrowIfTypeMismatch()
         {
