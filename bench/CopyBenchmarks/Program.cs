@@ -7,7 +7,8 @@ namespace CopyBenchmarks
         static void Main(string[] args)
         {
             //var summary = BenchmarkRunner.Run<CopyBench<double>>();
-            var summary = BenchmarkRunner.Run<AccessBench>();
+            //var summary = BenchmarkRunner.Run<AccessBench>();
+            var summary = BenchmarkRunner.Run<RandomAccess>();
         }
     }
 }
