@@ -1,6 +1,7 @@
 ﻿using System;
 using Image;
 using NUnit.Framework;
+using Image.Internal;
 
 namespace Tests
 {
@@ -18,6 +19,21 @@ namespace Tests
             var imageFromDoubles = new Image<double>(x, 1, x.Length);
 
             Assert.IsTrue(imageFromBytes.Equals(imageFromDoubles));
+        }
+
+        [Test]
+        public void TestIL()
+        {
+            var xx = Numerics.DangerousAdd(123, 250);
+            var yy = Numerics.DangerousAdd(123.0, 250.0);
+
+            var comp1 = Numerics.Compare(1.00, 200.0);
+            var comp2 = Numerics.Compare(1230, 250);
+            var comp3 = Numerics.Compare(1.00, 1.0);
+            var comp4 = Numerics.Compare(200u, 200u);
+
+
+
         }
     }
 }

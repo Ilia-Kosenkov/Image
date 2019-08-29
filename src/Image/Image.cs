@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -25,10 +27,16 @@ namespace Image
     public class Image<T> : Image, IImmutableImage<T> where T 
         : unmanaged, IComparable<T>
     {
+        private static readonly Func<T, T, T> Add;
+        private static readonly Func<T, T, T> Subtract;
+        private static readonly Func<T, T> Invert;
+        private static readonly Func<T, T, T> Multiply;
+        private static readonly Func<T, T, T> Divide;
+
         private readonly T[] _data;
         private T? _max;
         private T? _min;
-
+        
         public int Height { get; }
         public int Width { get; }
 
@@ -140,7 +148,19 @@ namespace Image
 
         public IImmutableImage<T> Clamp(T low, T high)
         {
-            throw new NotImplementedException();
+            using (var mem = MemoryPool<T>.Shared.Rent(Width * Height))
+            {
+                var span = mem.Memory.Span.Slice(0, Width * Height);
+                _data.AsSpan().CopyTo(span);
+
+                foreach (ref var item in span)
+                    if (item.CompareTo(low) < 0)
+                        item = low;
+                    else if (item.CompareTo(high) > 0)
+                        item = high;
+
+                return new Image<T>(span, Width, Height);
+            }
         }
 
         public IImmutableImage<T> Scale(T low, T high)
@@ -168,6 +188,8 @@ namespace Image
 
         double IImmutableImage.Min() => (double)Convert.ChangeType(Min(), typeof(double));
         double IImmutableImage.Max() => (double)Convert.ChangeType(Max(), typeof(double));
+        IImmutableImage IImmutableImage.Clamp(double low, double high)
+            => Clamp((T) Convert.ChangeType(low, typeof(T)), (T) Convert.ChangeType(high, typeof(T)));
 
         public override bool Equals(object obj)
             => obj is IImmutableImage<T> other
@@ -177,10 +199,16 @@ namespace Image
         public override int GetHashCode()
             => _data.GetHashCode() ^ ((Width << 16 ) ^ Height);
 
+        static Image()
+        {
+        }
+
         private static void ThrowIfTypeMismatch()
         {
             if (!AllowedTypes.Contains(typeof(T)))
                 throw new NotSupportedException(typeof(T).ToString());
         }
+
+
     }
 }

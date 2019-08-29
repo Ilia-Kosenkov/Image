@@ -10,6 +10,7 @@ namespace Image
 
         double Min();
         double Max();
+        IImmutableImage Clamp(double low, double high);
     }
 
     public interface IImmutableImage<T> : 
@@ -18,8 +19,8 @@ namespace Image
     {
         T this[int i, int j] { get; }
 
-        T Max();
-        T Min();
+        new T Max();
+        new T Min();
 
         double Percentile(T lvl);
 
