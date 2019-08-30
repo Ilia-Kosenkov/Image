@@ -40,5 +40,9 @@ namespace Image
         IImmutableImage<T> AddScalar(T item);
         IImmutableImage<T> MultiplyBy(T item);
         IImmutableImage<T> DivideBy(T item);
+
+        IImmutableImage<T> Add(IImmutableImage<T> other);
+        IImmutableImage<T> Subtract(IImmutableImage<T> other);
+
     }
 }

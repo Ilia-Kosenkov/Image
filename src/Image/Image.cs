@@ -323,7 +323,6 @@ namespace Image
                     span[i] = DangerousAdd(_data[i], item);
 #else
                     span[i] = _data[i] + temp;           
-                throw new NotImplementedException();
 #endif
                 return new Image<T>(span, Height, Width);
             }
@@ -344,7 +343,6 @@ namespace Image
                     span[i] = DangerousMultiply(_data[i], item);
 #else
                     span[i] = _data[i] * temp;           
-                throw new NotImplementedException();
 #endif
                 return new Image<T>(span, Height, Width);
             }
@@ -365,7 +363,50 @@ namespace Image
                     span[i] = DangerousDivide(_data[i], item);
 #else
                     span[i] = _data[i] / temp;           
-                throw new NotImplementedException();
+#endif
+                return new Image<T>(span, Height, Width);
+            }
+        }
+
+        public IImmutableImage<T> Add(IImmutableImage<T> other)
+        {
+            if (Width != other.Width && Height != other.Height)
+                throw new ArgumentException(nameof(other));
+
+            using (var mem = MemoryPool<T>.Shared.Rent(Width * Height))
+            {
+                var span = mem.Memory.Span.Slice(0, Width * Height);
+                var view = other.GetView();
+                for (var i = 0; i < _data.Length; i++)
+#if ALLOW_UNSAFE_IL_MATH
+                    span[i] = DangerousAdd(_data[i], view[i]);
+#else
+                {
+                    dynamic val = view[i];
+                    span[i] = _data[i] + val;
+                }           
+#endif
+                return new Image<T>(span, Height, Width);
+            }
+        }
+
+        public IImmutableImage<T> Subtract(IImmutableImage<T> other)
+        {
+            if (Width != other.Width && Height != other.Height)
+                throw new ArgumentException(nameof(other));
+
+            using (var mem = MemoryPool<T>.Shared.Rent(Width * Height))
+            {
+                var span = mem.Memory.Span.Slice(0, Width * Height);
+                var view = other.GetView();
+                for (var i = 0; i < _data.Length; i++)
+#if ALLOW_UNSAFE_IL_MATH
+                    span[i] = DangerousSubtract(_data[i], view[i]);
+#else
+                {
+                    dynamic val = view[i];
+                    span[i] = _data[i] - val;
+                }           
 #endif
                 return new Image<T>(span, Height, Width);
             }
@@ -433,6 +474,9 @@ namespace Image
         // TODO : Fix poor hash function
         public override int GetHashCode()
             => _data.GetHashCode() ^ ((Width << 16 ) ^ Height);
+
+        public static IImmutableImage<T> Zero(int height, int width)
+            => new Image<T>(new T[width * height], height, width);
 
         private static void ThrowIfTypeMismatch()
         {

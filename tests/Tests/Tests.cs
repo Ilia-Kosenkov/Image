@@ -105,6 +105,28 @@ namespace Tests
         }
 
         [Test]
+        public void TestMath()
+        {
+            var arr = new double[40_000];
+            for (var i = 0; i < arr.Length; i++)
+                arr[i] = R.Next(-100_000, 100_000);
+
+
+            var img = new Image<double>(arr, 200, 200);
+
+            Assume.That(img.Equals(Image<double>.Zero(img.Height, img.Width)), Is.False);
+
+            var newIm = img.Subtract(img);
+
+            Assert.True(newIm.Equals(Image<double>.Zero(newIm.Height, newIm.Width)));
+
+            var newIm2 = newIm.Add(img);
+
+            Assert.True(newIm2.Equals(img));
+
+        }
+
+        [Test]
         public void TestIL()
         {
             Assert.AreEqual(373, MathOps.DangerousAdd(123, 250));
