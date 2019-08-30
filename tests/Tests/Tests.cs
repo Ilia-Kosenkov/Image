@@ -1,13 +1,20 @@
 ﻿using System;
+using System.Linq;
 using Image;
 using NUnit.Framework;
-using Image.Internal;
+using Internal.Numerics;
+using MathNet.Numerics.Distributions;
 
 namespace Tests
 {
     [TestFixture]
     public class Tests
     {
+        private Random R;
+
+        [SetUp]
+        public void SetUp() => R = new Random();
+
         [Test]
         public void TestInit()
         {
@@ -21,19 +28,97 @@ namespace Tests
             Assert.IsTrue(imageFromBytes.Equals(imageFromDoubles));
         }
 
+
+        [Test]
+        public void TestMinMax()
+        {
+            var arr = new int[4_000];
+            for (var i = 0; i < arr.Length; i++)
+                arr[i] = R.Next();
+
+
+            var img = new Image<int>(arr, 80, 50);
+
+            Assert.AreEqual(arr.Min(), img.Min());
+            Assert.AreEqual(arr.Max(), img.Max());
+            Assert.AreEqual(arr.Min(), ((IImmutableImage) img).Min(), 1e-16);
+            Assert.AreEqual(arr.Max(), ((IImmutableImage)img).Max(), 1e-16);
+
+        }
+
+        [Test]
+        public void TestClamp()
+        {
+            var arr = new int[40_000];
+            for (var i = 0; i < arr.Length; i++)
+                arr[i] = R.Next();
+
+
+            var img = new Image<int>(arr, 200, 200);
+
+            var min = img.Min();
+            var max = img.Max();
+
+            var newMin = (int)(min + 0.1 * Math.Abs(min));
+            var newMax = (int)(max - 0.1 * Math.Abs(max));
+
+            var newIm = img.Clamp(newMin, newMax);
+
+            Assert.False(img.Equals(newIm));
+            Assert.AreEqual(newMin, newIm.Min());
+            Assert.AreEqual(newMax, newIm.Max());
+        }
+
+        [Test]
+        public void TestScale()
+        {
+            var arr = new double[40_000];
+            for (var i = 0; i < arr.Length; i++)
+                arr[i] = R.Next(-100_000, 100_000);
+
+
+            var img = new Image<double>(arr, 200, 200);
+
+            var newIm = img.Scale(0, 1_000);
+
+            Assert.False(img.Equals(newIm));
+            Assert.AreEqual(0, newIm.Min());
+            Assert.AreEqual(1_000, newIm.Max());
+        }
+
+
+        [Test]
+        public void TestTranspose()
+        {
+            var arr = new double[40_000];
+            for (var i = 0; i < arr.Length; i++)
+                arr[i] = R.Next(-100_000, 100_000);
+
+
+            var img = new Image<double>(arr, 200, 200);
+
+            var newIm = img.Transpose();
+
+            Assert.False(img.Equals(newIm));
+            Assert.AreEqual(img[10, 20], newIm[20, 10]);
+            Assert.AreNotEqual(img[10, 20], newIm[10, 20]);
+        }
+
         [Test]
         public void TestIL()
         {
-            var xx = Numerics.DangerousAdd(123, 250);
-            var yy = Numerics.DangerousAdd(123.0, 250.0);
+            Assert.AreEqual(373, MathOps.DangerousAdd(123, 250));
+            Assert.AreEqual(373.0, MathOps.DangerousAdd(123.0, 250.0));
 
-            var comp1 = Numerics.Compare(1.00, 200.0);
-            var comp2 = Numerics.Compare(1230, 250);
-            var comp3 = Numerics.Compare(1.00, 1.0);
-            var comp4 = Numerics.Compare(200u, 200u);
+            Assert.AreEqual(-1, MathOps.DangerousCompare(1.00, 200.0));
+            Assert.AreEqual(1, MathOps.DangerousCompare(1230, 250));
+            Assert.AreEqual(0, MathOps.DangerousCompare(1.00, 1.0));
+            Assert.AreEqual(0, MathOps.DangerousCompare(200u, 200u));
 
+            Assert.True(MathOps.DangerousGreaterEquals(200, 100));
+            Assert.False(MathOps.DangerousLessEquals(200, 100));
 
-
+            Assert.AreEqual(123, MathOps.DangerousCast<double, int>(123));
         }
     }
 }

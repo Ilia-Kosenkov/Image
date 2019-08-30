@@ -13,13 +13,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Image.Internal\Image.Internal.csproj" />
     <ProjectReference Include="..\..\src\Image\Image.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="Image.Internal">
-      <HintPath>..\..\src\Image.Internal\bin\Debug\netstandard2.0\Image.Internal.dll</HintPath>
+    <Reference Include="Internal.Numerics">
+      <HintPath>..\..\..\Internal\src\Numerics\bin\Debug\netstandard2.0\Internal.Numerics.dll</HintPath>
     </Reference>
   </ItemGroup>
 

@@ -10,6 +10,7 @@ namespace Image
 
         double Min();
         double Max();
+        double Percentile(double lvl);
         IImmutableImage Clamp(double low, double high);
     }
 
@@ -22,7 +23,9 @@ namespace Image
         new T Max();
         new T Min();
 
-        double Percentile(T lvl);
+        T Percentile(T lvl);
+
+        ReadOnlySpan<T> GetView();
 
         IImmutableImage<T> Copy();
         IImmutableImage<T> Transpose();
@@ -34,5 +37,8 @@ namespace Image
         IImmutableImage<T> Clamp(T low, T high);
         IImmutableImage<T> Scale(T low, T high);
 
+        IImmutableImage<T> AddScalar(T item);
+        IImmutableImage<T> MultiplyBy(T item);
+        IImmutableImage<T> DivideBy(T item);
     }
 }

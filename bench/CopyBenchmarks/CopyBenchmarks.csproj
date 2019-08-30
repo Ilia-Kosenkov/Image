@@ -19,4 +19,10 @@
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.5.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="Internal.Numerics">
+      <HintPath>..\..\..\Internal\src\Numerics\bin\Debug\netstandard2.0\Internal.Numerics.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>
