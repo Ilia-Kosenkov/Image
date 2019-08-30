@@ -12,6 +12,8 @@ namespace Image
         double Max();
         double Percentile(double lvl);
         IImmutableImage Clamp(double low, double high);
+        bool BitwiseEquals(IImmutableImage other);
+
     }
 
     public interface IImmutableImage<T> : 
@@ -26,6 +28,7 @@ namespace Image
         T Percentile(T lvl);
 
         ReadOnlySpan<T> GetView();
+
 
         IImmutableImage<T> Copy();
         IImmutableImage<T> Transpose();

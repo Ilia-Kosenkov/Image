@@ -418,13 +418,28 @@ namespace Image
                 return false;
 
             // WATCH: Possible optimization
-            return GetByteView().SequenceEqual(other.GetByteView());
+            var view = other.GetView();
+            for(var i = 0; i < Width * Height; i++)
+#if ALLOW_UNSAFE_IL_MATH
+                if (DangerousNotEquals(_data[i], view[i]))
+                    return false;
+#else
+                if(_data[i].CompareTo(view[i]) != 0)
+                    return false;
+#endif
+            return true;
         }
 
         public bool Equals(IImmutableImage other)
             => other is IImmutableImage<T> img
                && Equals(img);
-        
+        public bool BitwiseEquals(IImmutableImage other)
+        {
+            if (!(other is IImmutableImage<T> img) || Width != img.Width || Height != img.Height)
+                return false;
+            return GetByteView().SequenceEqual(img.GetByteView());
+        }
+
 
 
         public object Clone() => Copy();
@@ -458,6 +473,7 @@ namespace Image
 #endif
         }
 
+      
         double IImmutableImage.Percentile(double lvl)
         {
 #if ALLOW_UNSAFE_IL_MATH
