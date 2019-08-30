@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Buffers.Text;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
 using Image;
 using NUnit.Framework;
 using Internal.Numerics;
-using MathNet.Numerics.Distributions;
 
 namespace Tests
 {
@@ -119,11 +117,11 @@ namespace Tests
 
             Assume.That(img.Equals(Image<double>.Zero(img.Height, img.Width)), Is.False);
 
-            var newIm = img.Subtract(img);
+            var newIm = (img as IImmutableImage).Subtract(img);
 
             Assert.True(newIm.Equals(Image<double>.Zero(newIm.Height, newIm.Width)));
 
-            var newIm2 = newIm.Add(img);
+            var newIm2 = (newIm as IImmutableImage).Add(img);
 
             Assert.True(newIm2.Equals(img));
 
