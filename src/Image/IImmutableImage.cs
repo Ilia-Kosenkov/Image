@@ -14,6 +14,9 @@ namespace Image
         IImmutableImage Clamp(double low, double high);
         bool BitwiseEquals(IImmutableImage other);
 
+        IImmutableImage Add(IImmutableImage other);
+        IImmutableImage Subtract(IImmutableImage other);
+
     }
 
     public interface IImmutableImage<T> : 

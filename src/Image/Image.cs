@@ -440,9 +440,23 @@ namespace Image
             return GetByteView().SequenceEqual(img.GetByteView());
         }
 
-
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public object Clone() => Copy();
+
+
+        #region IImmutableImage
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        IImmutableImage IImmutableImage.Add(IImmutableImage other)
+            => other is IImmutableImage<T> img
+                ? Add(img)
+                : throw new ArgumentException(nameof(other));
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        IImmutableImage IImmutableImage.Subtract(IImmutableImage other)
+            => other is IImmutableImage<T> img
+                ? Subtract(img)
+                : throw new ArgumentException(nameof(other));
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         double IImmutableImage.Min()
@@ -483,6 +497,7 @@ namespace Image
 #endif
         }
 
+        #endregion
         public override bool Equals(object obj)
             => obj is IImmutableImage<T> other
                && Equals(other);
