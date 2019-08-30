@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Buffers.Text;
+using System.IO;
 using System.Linq;
+using System.Runtime.Serialization.Formatters.Binary;
 using Image;
 using NUnit.Framework;
 using Internal.Numerics;
@@ -124,6 +127,24 @@ namespace Tests
 
             Assert.True(newIm2.Equals(img));
 
+        }
+
+        [Test]
+        public void TestSerialize()
+        {
+            var arr = new double[40_000];
+            for (var i = 0; i < arr.Length; i++)
+                arr[i] = R.Next(-100_000, 100_000);
+
+
+            var img = new Image<double>(arr, 200, 200);
+
+            using var mem = new MemoryStream();
+            var f = new BinaryFormatter();
+            f.Serialize(mem, img);
+            mem.Position = 0;
+            var img2 = f.Deserialize(mem) as Image<double>;
+            Assert.True(img.Equals(img2));
         }
 
         [Test]

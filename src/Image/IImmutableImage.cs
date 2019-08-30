@@ -1,8 +1,9 @@
 ﻿using System;
+using System.Runtime.Serialization;
 
 namespace Image
 {
-    public interface IImmutableImage : ICloneable, IEquatable<IImmutableImage>
+    public interface IImmutableImage : ICloneable, IEquatable<IImmutableImage>, ISerializable
     {
         int Height { get; }
         int Width { get; }

@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Serialization;
 #if ALLOW_UNSAFE_IL_MATH
 using static Internal.Numerics.MathOps;
 #endif
@@ -26,6 +27,7 @@ namespace Image
             }.ToImmutableList();
     }
 
+    [Serializable]
     public class Image<T> : Image, IImmutableImage<T> 
         where T : unmanaged, IComparable<T>
     {
@@ -87,7 +89,43 @@ namespace Image
             Width = width;
             Height = height;
         }
-        
+
+        public Image(SerializationInfo info, StreamingContext context)
+        {
+            ThrowIfTypeMismatch();
+
+
+            // WATCH : Weak type checks
+            var type = info.GetString("Type");
+            if(type != typeof(T).FullName)
+                throw new ArrayTypeMismatchException();
+
+            var width = info.GetInt32("Width");
+            var height = info.GetInt32("Height");
+            var byteData = info.GetValue("ByteData", typeof(byte[])) as byte[] 
+                       ?? throw new InvalidOperationException();
+
+
+            if (width < 1)
+                throw new ArgumentOutOfRangeException(nameof(width));
+            if (height < 1)
+                throw new ArgumentOutOfRangeException(nameof(height));
+
+            var size = Unsafe.SizeOf<T>();
+
+            // Size mismatch
+            if (size * byteData.Length < width * height)
+                throw new ArgumentException();
+
+            _data = new T[width * height];
+
+
+            if (!MemoryMarshal.Cast<byte, T>(byteData).TryCopyTo(_data))
+                throw new InvalidOperationException();
+
+            Width = width;
+            Height = height;
+        }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
         public T Max()
@@ -108,7 +146,6 @@ namespace Image
 
             return _max.Value;
         }
-
        
         [MethodImpl(MethodImplOptions.Synchronized)]
         public T Min()
@@ -505,6 +542,14 @@ namespace Image
         // TODO : Fix poor hash function
         public override int GetHashCode()
             => _data.GetHashCode() ^ ((Width << 16 ) ^ Height);
+
+        void ISerializable.GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            info.AddValue("Width", Width);
+            info.AddValue("Height", Height);
+            info.AddValue("Type", typeof(T).FullName);
+            info.AddValue("ByteData", GetByteView().ToArray());
+        }
 
         public static IImmutableImage<T> Zero(int height, int width)
             => new Image<T>(new T[width * height], height, width);
