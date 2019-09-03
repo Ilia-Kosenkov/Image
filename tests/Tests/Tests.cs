@@ -1,10 +1,12 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization.Formatters.Binary;
 using Image;
 using NUnit.Framework;
 using Internal.Numerics;
+using MathNet.Numerics;
 
 namespace Tests
 {
@@ -42,8 +44,8 @@ namespace Tests
 
             Assert.AreEqual(arr.Min(), img.Min());
             Assert.AreEqual(arr.Max(), img.Max());
-            Assert.AreEqual(arr.Min(), ((IImmutableImage) img).Min(), 1e-16);
-            Assert.AreEqual(arr.Max(), ((IImmutableImage)img).Max(), 1e-16);
+            Assert.AreEqual(arr.Min(), ((ISubImage) img).Min(), 1e-16);
+            Assert.AreEqual(arr.Max(), ((ISubImage)img).Max(), 1e-16);
 
         }
 
@@ -114,14 +116,14 @@ namespace Tests
 
 
             var img = new Image<double>(arr, 200, 200);
-
+            
             Assume.That(img.Equals(Image<double>.Zero(img.Height, img.Width)), Is.False);
 
-            var newIm = (img as IImmutableImage).Subtract(img);
+            var newIm = ((IImage) img).Subtract(img);
 
             Assert.True(newIm.Equals(Image<double>.Zero(newIm.Height, newIm.Width)));
 
-            var newIm2 = (newIm as IImmutableImage).Add(img);
+            var newIm2 = newIm.Add(img);
 
             Assert.True(newIm2.Equals(img));
 
@@ -160,6 +162,40 @@ namespace Tests
             Assert.False(MathOps.DangerousLessEquals(200, 100));
 
             Assert.AreEqual(123, MathOps.DangerousCast<double, int>(123));
+        }
+
+        [Test]
+        public void TestImageShape()
+        {
+            var arr = new double[40_000];
+            for (var i = 0; i < arr.Length; i++)
+                arr[i] = R.Next(-100_000, 100_000);
+
+
+            var img = new Image<double>(arr, 100, 400);
+
+            Assert.AreEqual(100, img.Height);
+            Assert.AreEqual(400, img.Width);
+            Assert.AreEqual(arr.Length, img.Size);
+
+            for(var i = 0; i < img.Height; i++)
+            for (var j = 0; j < img.Width; j++)
+                Assert.IsTrue(img[i, j].AlmostEqual(img[i * img.Width + j]) &&
+                              img[i, j].AlmostEqual(arr[i * img.Width + j]));
+        }
+
+        [Test]
+        public void TestCloning()
+        {
+            var arr = new double[40_000];
+            for (var i = 0; i < arr.Length; i++)
+                arr[i] = R.Next(-100_000, 100_000);
+
+
+            var img = new Image<double>(arr, 100, 400);
+
+            Assert.IsTrue(img.Equals(img.Clone()));
+            Assert.AreEqual(img.GetHashCode(), img.Copy().GetHashCode());
         }
     }
 }

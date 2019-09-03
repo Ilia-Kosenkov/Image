@@ -11,6 +11,7 @@
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DefineConstants>TRACE;ALLOW_UNSAFE_IL_MATH</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>

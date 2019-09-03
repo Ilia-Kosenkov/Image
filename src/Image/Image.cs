@@ -11,7 +11,7 @@ using static Internal.Numerics.MathOps;
 
 namespace Image
 {
-    public abstract class Image 
+    public abstract class Image
     {
         public static IImmutableList<Type> AllowedTypes { get; } =
             new[] 
@@ -28,14 +28,16 @@ namespace Image
     }
 
     [Serializable]
-    public class Image<T> : Image, IImmutableImage<T> 
+    public class Image<T> : Image, IImage<T> 
         where T : unmanaged, IComparable<T>
     {
  
         private readonly T[] _data;
         private T? _max;
         private T? _min;
-        
+
+        public long Size => Height * Width;
+
         public int Height { get; }
         public int Width { get; }
 
@@ -45,6 +47,10 @@ namespace Image
                 : j < 0 || j >= Width
                     ? throw new ArgumentOutOfRangeException(nameof(j))
                     : _data[i * Width + j];
+
+        public T this[long i] => i < 0 || i >= Size
+            ? throw new ArgumentOutOfRangeException(nameof(i))
+            : _data[i];
 
         public Image(ReadOnlySpan<T> data, int height, int width)
         {
@@ -146,7 +152,8 @@ namespace Image
 
             return _max.Value;
         }
-       
+
+
         [MethodImpl(MethodImplOptions.Synchronized)]
         public T Min()
         {
@@ -218,10 +225,10 @@ namespace Image
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<T> GetView() => _data;
 
-        public IImmutableImage<T> Copy()
+        public IImage<T> Copy()
             => new Image<T>(_data, Height, Width);
 
-        public IImmutableImage<T> Transpose()
+        public IImage<T> Transpose()
         {
             using (var mem = MemoryPool<T>.Shared.Rent(Width * Height))
             {
@@ -235,12 +242,12 @@ namespace Image
             }
         }
 
-        public IImmutableImage<TOther> CastTo<TOther>() where TOther 
+        public IImage<TOther> CastTo<TOther>() where TOther 
             : unmanaged, IComparable<TOther>
         {
             using (var pool = MemoryPool<TOther>.Shared.Rent(Width * Height))
             {
-                var span = pool.Memory.Span.Slice(Width * Height);
+                var span = pool.Memory.Span.Slice(0, Width * Height);
                 for (var i = 0; i < _data.Length; i++)
 #if ALLOW_UNSAFE_IL_MATH
                     span[i] = DangerousCast<T, TOther>(_data[i]);
@@ -251,11 +258,11 @@ namespace Image
             }
         }
 
-        public IImmutableImage<TOther> CastTo<TOther>(Func<T, TOther> caster) where TOther : unmanaged, IComparable<TOther>
+        public IImage<TOther> CastTo<TOther>(Func<T, TOther> caster) where TOther : unmanaged, IComparable<TOther>
         {
             using (var pool = MemoryPool<TOther>.Shared.Rent(Width * Height))
             {
-                var span = pool.Memory.Span.Slice(Width * Height);
+                var span = pool.Memory.Span.Slice(0, Width * Height);
                 for (var i = 0; i < _data.Length; i++)
                     span[i] = caster(_data[i]);
 
@@ -263,7 +270,7 @@ namespace Image
             }
         }
 
-        public IImmutableImage<T> Clamp(T low, T high)
+        public IImage<T> Clamp(T low, T high)
         {
             using (var mem = MemoryPool<T>.Shared.Rent(Width * Height))
             {
@@ -286,7 +293,7 @@ namespace Image
             }
         }
 
-        public IImmutableImage<T> Scale(T low, T high)
+        public IImage<T> Scale(T low, T high)
         {
 #if !ALLOW_UNSAFE_IL_MATH
             dynamic dLow = low;
@@ -345,7 +352,7 @@ namespace Image
 #endif
         }
 
-        public IImmutableImage<T> AddScalar(T item)
+        public IImage<T> AddScalar(T item)
         {
 #if !ALLOW_UNSAFE_IL_MATH
             dynamic temp = item;
@@ -365,7 +372,7 @@ namespace Image
             }
         }
 
-        public IImmutableImage<T> MultiplyBy(T item)
+        public IImage<T> MultiplyBy(T item)
         {
 #if !ALLOW_UNSAFE_IL_MATH
             dynamic temp = item;
@@ -385,7 +392,7 @@ namespace Image
             }
         }
 
-        public IImmutableImage<T> DivideBy(T item)
+        public IImage<T> DivideBy(T item)
         {
 #if !ALLOW_UNSAFE_IL_MATH
             dynamic temp = item;
@@ -405,7 +412,7 @@ namespace Image
             }
         }
 
-        public IImmutableImage<T> Add(IImmutableImage<T> other)
+        public IImage<T> Add(IImage<T> other)
         {
             if (Width != other.Width && Height != other.Height)
                 throw new ArgumentException(nameof(other));
@@ -427,7 +434,7 @@ namespace Image
             }
         }
 
-        public IImmutableImage<T> Subtract(IImmutableImage<T> other)
+        public IImage<T> Subtract(IImage<T> other)
         {
             if (Width != other.Width && Height != other.Height)
                 throw new ArgumentException(nameof(other));
@@ -449,7 +456,7 @@ namespace Image
             }
         }
 
-        public bool Equals(IImmutableImage<T> other)
+        public bool Equals(IImage<T> other)
         {
             if (other is null || Width != other.Width || Height != other.Height)
                 return false;
@@ -467,12 +474,12 @@ namespace Image
             return true;
         }
 
-        public bool Equals(IImmutableImage other)
-            => other is IImmutableImage<T> img
+        public bool Equals(IImage other)
+            => other is IImage<T> img
                && Equals(img);
-        public bool BitwiseEquals(IImmutableImage other)
+        public bool BitwiseEquals(IImage other)
         {
-            if (!(other is IImmutableImage<T> img) || Width != img.Width || Height != img.Height)
+            if (!(other is IImage<T> img) || Width != img.Width || Height != img.Height)
                 return false;
             return GetByteView().SequenceEqual(img.GetByteView());
         }
@@ -481,22 +488,22 @@ namespace Image
         public object Clone() => Copy();
 
 
-        #region IImmutableImage
+        #region ISubImage
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        IImmutableImage IImmutableImage.Add(IImmutableImage other)
-            => other is IImmutableImage<T> img
+        IImage IImage.Add(IImage other)
+            => other is IImage<T> img
                 ? Add(img)
                 : throw new ArgumentException(nameof(other));
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        IImmutableImage IImmutableImage.Subtract(IImmutableImage other)
-            => other is IImmutableImage<T> img
+        IImage IImage.Subtract(IImage other)
+            => other is IImage<T> img
                 ? Subtract(img)
                 : throw new ArgumentException(nameof(other));
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        double IImmutableImage.Min()
+        double ISubImage.Min()
         {
 #if ALLOW_UNSAFE_IL_MATH
             return DangerousCast<T, double>(Min());
@@ -506,7 +513,7 @@ namespace Image
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        double IImmutableImage.Max()
+        double ISubImage.Max()
         {
 #if ALLOW_UNSAFE_IL_MATH
             return DangerousCast<T, double>(Max());
@@ -515,7 +522,7 @@ namespace Image
 #endif
         }
 
-        IImmutableImage IImmutableImage.Clamp(double low, double high)
+        IImage IImage.Clamp(double low, double high)
         {
 #if ALLOW_UNSAFE_IL_MATH
             return Clamp(DangerousCast<double, T>(low), DangerousCast<double, T>(high));
@@ -525,7 +532,7 @@ namespace Image
         }
 
       
-        double IImmutableImage.Percentile(double lvl)
+        double ISubImage.Percentile(double lvl)
         {
 #if ALLOW_UNSAFE_IL_MATH
             return DangerousCast<T, double>(Percentile(DangerousCast<double, T>(lvl)));
@@ -536,7 +543,7 @@ namespace Image
 
         #endregion
         public override bool Equals(object obj)
-            => obj is IImmutableImage<T> other
+            => obj is IImage<T> other
                && Equals(other);
 
         // TODO : Fix poor hash function
@@ -551,7 +558,7 @@ namespace Image
             info.AddValue("ByteData", GetByteView().ToArray());
         }
 
-        public static IImmutableImage<T> Zero(int height, int width)
+        public static ISubImage<T> Zero(int height, int width)
             => new Image<T>(new T[width * height], height, width);
 
         private static void ThrowIfTypeMismatch()
