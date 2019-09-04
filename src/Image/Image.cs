@@ -8,7 +8,6 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 #if ALLOW_UNSAFE_IL_MATH
-using System.Net.Mime;
 using static Internal.Numerics.MathOps;
 #endif
 
@@ -59,8 +58,8 @@ namespace ImageCore
         private readonly T[] _data;
         private T? _max;
         private T? _min;
-        private T? _average;
-        private T? _var;
+        private double? _average;
+        private double? _var;
         private T? _median;
 
         internal Span<T> RawView => _data;
@@ -276,86 +275,22 @@ namespace ImageCore
             return _median.Value;
         }
 
-        [MethodImpl(MethodImplOptions.Synchronized)]
         public T Average()
         {
-            if (_average is null)
-            {
 #if ALLOW_UNSAFE_IL_MATH
-                T temp = default;
-                foreach (var item in _data)
-                    temp = DangerousAdd(temp, item);
-
-                _average = DangerousDivide(temp, DangerousCast<long, T>(Size));
+            return DangerousCast<double, T>((this as ISubImage).Average());
 #else
-                dynamic temp = default(T);
-                foreach (var item in _data)
-                    temp += item;
-
-                _average = temp / Size;
+            return (T) Convert.ChangeType((this as IImage).Average(), typeof(T));
 #endif
-            }
-
-            return _average.Value;
         }
 
-        [MethodImpl(MethodImplOptions.Synchronized)]
         public T Var()
         {
-            if (_var is null)
-            {
 #if ALLOW_UNSAFE_IL_MATH
-                T temp = default;
-                var avg = Average();
-
-                if (Size > 1)
-                {
-                    var diff1 = DangerousSubtract(_data[0], avg);
-                    var diff2 = DangerousSubtract(_data[1], avg);
-
-                    var mul1 = DangerousMultiply(diff1, diff1);
-                    var mul2 = DangerousMultiply(diff2, diff2);
-
-                    temp = DangerousAdd(mul1, mul2);
-
-                }
-
-                for (var i = 2; i < Size; i++)
-                { 
-                    var diff = DangerousSubtract(_data[i], avg);
-                    var mul = DangerousMultiply(diff, diff);
-                    temp = DangerousDivide(DangerousAdd(DangerousMultiply(temp, DangerousCast<int, T>(i - 1)), mul),
-                        DangerousCast<int, T>(i));
-                }
-
-               
+            return DangerousCast<double, T>((this as ISubImage).Var());
 #else
-                dynamic temp = default;
-                dynamic avg = Average();
-
-                if (Size > 1)
-                {
-                    var diff1 = _data[0] - avg;
-                    var diff2 = _data[1] - avg;
-
-                    var mul1 = diff1 * diff1;
-                    var mul2 = diff2 * diff2;
-
-                    temp = mul1 + mul2;
-
-                }
-
-                for (var i = 2; i < Size; i++)
-                {
-                    var diff = _data[i] - avg;
-                    var mul = diff * diff;
-                    temp = (temp * (i - 1) + mul) / i;
-                }
+            return (T) Convert.ChangeType((this as IImage).Var(), typeof(T));
 #endif
-                _var = temp;
-            }
-
-            return _var.Value;
         }
 
 
@@ -744,25 +679,55 @@ namespace ImageCore
 #endif
         }
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
         double ISubImage.Var()
         {
+            if(_var is null)
+            {
+                if (Size > 1)
+                {
+                    var avg = Average();
+                    var sum = 0.0;
 #if ALLOW_UNSAFE_IL_MATH
-            return DangerousCast<T, double>(Var());
+                    foreach(var item in _data)
+                    { 
+                        var diff = DangerousCast<T, double>(DangerousSubtract(item, avg));
 #else
-            return (double)Convert.ChangeType(Var(), typeof(double));
+                    foreach (dynamic item in _data)
+                    {
+                        var diff = item - avg;
 #endif
+                        sum += diff * diff;
+                    }
+
+                    _var = sum / (Size - 1);
+                }
+                else
+                    _var = 0.0;
+            }
+
+            return _var.Value;
         }
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
         double ISubImage.Average()
         {
+            if(_average is null)
+            {
+                var sum = 0.0;
 #if ALLOW_UNSAFE_IL_MATH
-            return DangerousCast<T, double>(Average());
+                foreach (var item in _data)
+                    sum += DangerousCast<T, double>(item);
 #else
-            return (double)Convert.ChangeType(Average(), typeof(double));
+                foreach (dynamic item in _data)
+                    sum += item;
 #endif
+                _average = sum / Size;
+            }
+            return _average.Value;
         }
 
-        #endregion
+#endregion
 
         public IEnumerator<T> GetEnumerator()
             => (_data as IEnumerable<T>).GetEnumerator();

@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
@@ -250,14 +248,13 @@ namespace Tests
             Assert.AreEqual(img.Average(), slice.Average(), 5);
             Assert.AreEqual(
                 img.Var(), 
-                slice.Var(), 5e1);
+                slice.Var(), 5e2);
 
         }
 
         [TestCase(0.25)]
         [TestCase(0.50)]
         [TestCase(0.75)]
-
         [Test]
         public void TestPercentile(double p)
         {

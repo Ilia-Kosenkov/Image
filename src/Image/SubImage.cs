@@ -14,8 +14,8 @@ namespace ImageCore
 
         private T? _max;
         private T? _min;
-        private T? _average;
-        private T? _var;
+        private double? _average;
+        private double? _var;
         private T? _median;
 
         public long Size => _indexes.Count;
@@ -153,57 +153,22 @@ namespace ImageCore
 
             return _median.Value;
         }
-
-        [MethodImpl(MethodImplOptions.Synchronized)]
         public T Average()
         {
-            if (_average is null)
-            {
 #if ALLOW_UNSAFE_IL_MATH
-                T temp = default;
-                foreach (var item in _indexes.Select(x => _sourceImage[x.I, x.J]))
-                    temp = DangerousAdd(temp, item);
-
-                _average = DangerousDivide(temp, DangerousCast<long, T>(Size));
+            return DangerousCast<double, T>((this as ISubImage).Average());
 #else
-                dynamic temp = default(T);
-                foreach (var item in _indexes.Select(x => _sourceImage[x.I, x.J]))
-                    temp += item;
-
-                _average = temp / Size;
+            return (T) Convert.ChangeType((this as IImage).Average(), typeof(T));
 #endif
-            }
-
-            return _average.Value;
         }
 
-        [MethodImpl(MethodImplOptions.Synchronized)]
         public T Var()
         {
-            if (_var is null)
-            {
 #if ALLOW_UNSAFE_IL_MATH
-                T temp = default;
-                var avg = Average();
-
-                foreach (var item in _indexes.Select(x => _sourceImage[x.I, x.J]))
-                {
-                    var diff = DangerousSubtract(item, avg);
-                    temp = DangerousAdd(temp, DangerousMultiply(diff, diff));
-                }
-
-                _var = DangerousDivide(temp, DangerousCast<long, T>(Size - 1));
+            return DangerousCast<double, T>((this as ISubImage).Var());
 #else
-                dynamic temp = default(T);
-                dynamic avg = Average();
-                foreach (var item in _indexes.Select(x => _sourceImage[x.I, x.J]))
-                    temp += (item - avg) * (item - avg);
-
-                _var = temp / (Size - 1);
+            return (T) Convert.ChangeType((this as IImage).Var(), typeof(T));
 #endif
-            }
-
-            return _var.Value;
         }
 
         double ISubImage.Min()
@@ -229,22 +194,52 @@ namespace ImageCore
 #endif
         }
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
         double ISubImage.Var()
         {
+            if (_var is null)
+            {
+                if (Size > 1)
+                {
+                    var avg = Average();
+                    var sum = 0.0;
 #if ALLOW_UNSAFE_IL_MATH
-            return DangerousCast<T, double>(Var());
+                    foreach (var item in _indexes.Select(x => _sourceImage[x.I, x.J]))
+                    {
+                        var diff = DangerousCast<T, double>(DangerousSubtract(item, avg));
 #else
-            return (double)Convert.ChangeType(Var(), typeof(double));
+                    foreach (dynamic item in _indexes.Select(x => _sourceImage[x.I, x.J]))
+                    {
+                        var diff = item - avg;
 #endif
+                        sum += diff * diff;
+                    }
+
+                    _var = sum / (Size - 1);
+                }
+                else
+                    _var = 0.0;
+            }
+
+            return _var.Value;
         }
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
         double ISubImage.Average()
         {
+            if (_average is null)
+            {
+                var sum = 0.0;
 #if ALLOW_UNSAFE_IL_MATH
-            return DangerousCast<T, double>(Average());
+                foreach (var item in _indexes.Select(x => _sourceImage[x.I, x.J]))
+                    sum += DangerousCast<T, double>(item);
 #else
-            return (double)Convert.ChangeType(Average(), typeof(double));
+                foreach (dynamic item in _indexes.Select(x => _sourceImage[x.I, x.J]))
+                    sum += item;
 #endif
+                _average = sum / Size;
+            }
+            return _average.Value;
         }
 
 
