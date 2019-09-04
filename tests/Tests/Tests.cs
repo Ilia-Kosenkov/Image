@@ -195,7 +195,8 @@ namespace Tests
             var img = new Image<double>(arr, 100, 400);
 
             Assert.IsTrue(img.Equals(img.Clone()));
-            Assert.AreEqual(img.GetHashCode(), img.Copy().GetHashCode());
+            Assert.AreEqual(img.GetHashCode(), img.Clone().GetHashCode());
+
         }
     }
 }

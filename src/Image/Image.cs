@@ -546,9 +546,9 @@ namespace Image
             => obj is IImage<T> other
                && Equals(other);
 
-        // TODO : Fix poor hash function
         public override int GetHashCode()
-            => _data.GetHashCode() ^ ((Width << 16 ) ^ Height);
+            //=> _data.GetHashCode() ^ ((Width << 16 ) ^ Height);
+            => (int) unchecked((Internals.CRC32Generator.ComputeHash<T>(_data) * 31 + (uint) Width) * 31 + (uint) Height);
 
         void ISerializable.GetObjectData(SerializationInfo info, StreamingContext context)
         {
