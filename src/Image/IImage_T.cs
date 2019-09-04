@@ -1,8 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Image
 {
-    public interface IImage<T> : IEquatable<IImage<T>>, ISubImage<T>, IViewable<T>, IImage
+    public interface IImage<T> : IEquatable<IImage<T>>, ISubImage<T>, IViewable<T>, IEnumerable<T>, IImage
         where T : unmanaged, IComparable<T>
     {
         T this[int i, int j] { get; }
@@ -22,5 +23,9 @@ namespace Image
         IImage<T> DivideBy(T item);
         IImage<T> Add(IImage<T> other);
         IImage<T> Subtract(IImage<T> other);
+
+        new ISubImage<T> Slice(ICollection<(int I, int J)> indexes);
+        ISubImage<T> Slice(Func<T, bool> selector);
+        ISubImage<T> Slice(Func<int, int, T, bool> selector);
     }
 }

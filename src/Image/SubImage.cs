@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-
 using static Internal.Numerics.MathOps;
 
 namespace Image
@@ -96,7 +94,46 @@ namespace Image
 
         public T Percentile(T lvl)
         {
-            throw new NotImplementedException();
+#if ALLOW_UNSAFE_IL_MATH
+            var hund = DangerousCast<int, T>(100);
+            var zero = DangerousCast<int, T>(0);
+            if (DangerousLessThan(lvl, zero)
+                || DangerousGreaterThan(lvl, hund))
+                throw new ArgumentOutOfRangeException(nameof(lvl));
+
+            if (DangerousEquals(lvl, zero))
+                return Min();
+            if (DangerousEquals(lvl, hund))
+                return Max();
+
+            // ceil(lvl * width * height / 100)
+            var len = (int)Math.Ceiling(
+                DangerousCast<T, double>(
+                    DangerousMultiply(
+                        lvl,
+                        DangerousCast<long, T>(Size))) / 100.0);
+
+            if (len < 1)
+                len = 1;
+
+            return _indexes.Select(x => _sourceImage[x.I, x.J])
+                .OrderBy(x => x, Comparer<T>.Default)
+                .Skip(len - 1).First();
+#else
+            dynamic l = lvl;
+            if (Math.Abs(l) < double.Epsilon)
+                return Min();
+            if (Math.Abs(l - 1) < double.Epsilon)
+                return Max();
+            var query = _indexes.Select(x => _sourceImage[x.I, x.J]).OrderBy(x => x, Comparer<T>.Default);
+
+            var len = (int)Math.Ceiling(l * Size / 100.0);
+
+            if (len < 1)
+                len = 1;
+
+            return query.Skip(len - 1).Take(1).First();
+#endif
         }
 
         double ISubImage.Min()
@@ -114,7 +151,11 @@ namespace Image
 
         public double Percentile(double lvl)
         {
-            throw new NotImplementedException();
+#if ALLOW_UNSAFE_IL_MATH
+            return DangerousCast<T, double>(Percentile(DangerousCast<double, T>(lvl)));
+#else
+            return (double) Convert.ChangeType(Percentile((T) Convert.ChangeType(lvl, typeof(T))), typeof(double));
+#endif
         }
 
     }

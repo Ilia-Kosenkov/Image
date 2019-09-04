@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Runtime.Serialization;
 
 namespace Image
 {
-    public interface IImage : ISubImage, IViewable, ICloneable, IEquatable<IImage>, ISerializable
+    public interface IImage : ISubImage, IViewable, ICloneable, IEquatable<IImage>, ISerializable, IEnumerable
     {
         int Height { get; }
         int Width { get; }
@@ -12,6 +14,11 @@ namespace Image
 
         IImage Add(IImage other);
         IImage Subtract(IImage other);
+
+        ISubImage Slice(ICollection<(int I, int J)> pixels);
+        ISubImage Slice(Func<double, bool> selector);
+        ISubImage Slice(Func<int, int, double, bool> selector);
+
 
     }
 }

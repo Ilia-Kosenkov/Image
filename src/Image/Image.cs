@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Buffers;
+using System.Collections;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -456,6 +458,37 @@ namespace Image
             }
         }
 
+        public ISubImage<T> Slice(ICollection<(int I, int J)> indexes) 
+            => new SubImage<T>(this, indexes);
+
+        public ISubImage<T> Slice(Func<T, bool> selector)
+        {
+            var indexes = new List<(int I, int J)>();
+            for(var i = 0; i < Height; i++)
+                for(var j = 0; j < Width; j++)
+                    if(selector(this[i, j]))
+                        indexes.Add((i, j));
+
+            if (indexes.Count == Size)
+                return this;
+
+            return new SubImage<T>(this, indexes);
+        }
+
+        public ISubImage<T> Slice(Func<int, int, T, bool> selector)
+        {
+            var indexes = new List<(int I, int J)>();
+            for (var i = 0; i < Height; i++)
+                for (var j = 0; j < Width; j++)
+                    if (selector(i, j, this[i, j]))
+                        indexes.Add((i, j));
+
+            if (indexes.Count == Size)
+                return this;
+
+            return new SubImage<T>(this, indexes);
+        }
+
         public bool Equals(IImage<T> other)
         {
             if (other is null || Width != other.Width || Height != other.Height)
@@ -488,7 +521,7 @@ namespace Image
         public object Clone() => Copy();
 
 
-        #region ISubImage
+        #region IImage
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         IImage IImage.Add(IImage other)
@@ -501,6 +534,29 @@ namespace Image
             => other is IImage<T> img
                 ? Subtract(img)
                 : throw new ArgumentException(nameof(other));
+
+        ISubImage IImage.Slice(ICollection<(int I, int J)> pixels) 
+            => Slice(pixels);
+
+        ISubImage IImage.Slice(Func<double, bool> selector)
+        {
+#if !ALLOW_UNSAFE_IL_MATH
+            throw new NotImplementedException();
+#else
+            bool Func(T x) => selector(DangerousCast<T, double>(x));
+            return Slice(Func);
+#endif
+        }
+
+        ISubImage IImage.Slice(Func<int, int, double, bool> selector)
+        {
+#if !ALLOW_UNSAFE_IL_MATH
+            throw new NotImplementedException();
+#else
+            bool Func(int i, int j, T x) => selector(i, j, DangerousCast<T, double>(x));
+            return Slice(Func);
+#endif
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         double ISubImage.Min()
@@ -541,7 +597,11 @@ namespace Image
 #endif
         }
 
-        #endregion
+#endregion
+
+        public IEnumerator<T> GetEnumerator()
+            => (_data as IEnumerable<T>).GetEnumerator();
+
         public override bool Equals(object obj)
             => obj is IImage<T> other
                && Equals(other);
@@ -549,6 +609,11 @@ namespace Image
         public override int GetHashCode()
             //=> _data.GetHashCode() ^ ((Width << 16 ) ^ Height);
             => (int) unchecked((Internals.CRC32Generator.ComputeHash<T>(_data) * 31 + (uint) Width) * 31 + (uint) Height);
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
 
         void ISerializable.GetObjectData(SerializationInfo info, StreamingContext context)
         {

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Runtime.Serialization.Formatters.Binary;
 using Image;
 using NUnit.Framework;
@@ -13,10 +12,10 @@ namespace Tests
     [TestFixture]
     public class Tests
     {
-        private Random R;
+        private Random _r;
 
         [SetUp]
-        public void SetUp() => R = new Random();
+        public void SetUp() => _r = new Random();
 
         [Test]
         public void TestInit()
@@ -37,7 +36,7 @@ namespace Tests
         {
             var arr = new int[4_000];
             for (var i = 0; i < arr.Length; i++)
-                arr[i] = R.Next();
+                arr[i] = _r.Next();
 
 
             var img = new Image<int>(arr, 80, 50);
@@ -54,7 +53,7 @@ namespace Tests
         {
             var arr = new int[40_000];
             for (var i = 0; i < arr.Length; i++)
-                arr[i] = R.Next();
+                arr[i] = _r.Next();
 
 
             var img = new Image<int>(arr, 200, 200);
@@ -77,7 +76,7 @@ namespace Tests
         {
             var arr = new double[40_000];
             for (var i = 0; i < arr.Length; i++)
-                arr[i] = R.Next(-100_000, 100_000);
+                arr[i] = _r.Next(-100_000, 100_000);
 
 
             var img = new Image<double>(arr, 200, 200);
@@ -95,7 +94,7 @@ namespace Tests
         {
             var arr = new double[40_000];
             for (var i = 0; i < arr.Length; i++)
-                arr[i] = R.Next(-100_000, 100_000);
+                arr[i] = _r.Next(-100_000, 100_000);
 
 
             var img = new Image<double>(arr, 200, 200);
@@ -112,7 +111,7 @@ namespace Tests
         {
             var arr = new double[40_000];
             for (var i = 0; i < arr.Length; i++)
-                arr[i] = R.Next(-100_000, 100_000);
+                arr[i] = _r.Next(-100_000, 100_000);
 
 
             var img = new Image<double>(arr, 200, 200);
@@ -134,7 +133,7 @@ namespace Tests
         {
             var arr = new double[40_000];
             for (var i = 0; i < arr.Length; i++)
-                arr[i] = R.Next(-100_000, 100_000);
+                arr[i] = _r.Next(-100_000, 100_000);
 
 
             var img = new Image<double>(arr, 200, 200);
@@ -148,7 +147,7 @@ namespace Tests
         }
 
         [Test]
-        public void TestIL()
+        public void TestIl()
         {
             Assert.AreEqual(373, MathOps.DangerousAdd(123, 250));
             Assert.AreEqual(373.0, MathOps.DangerousAdd(123.0, 250.0));
@@ -169,7 +168,7 @@ namespace Tests
         {
             var arr = new double[40_000];
             for (var i = 0; i < arr.Length; i++)
-                arr[i] = R.Next(-100_000, 100_000);
+                arr[i] = _r.Next(-100_000, 100_000);
 
 
             var img = new Image<double>(arr, 100, 400);
@@ -189,13 +188,61 @@ namespace Tests
         {
             var arr = new double[40_000];
             for (var i = 0; i < arr.Length; i++)
-                arr[i] = R.Next(-100_000, 100_000);
+                arr[i] = _r.Next(-100_000, 100_000);
 
 
             var img = new Image<double>(arr, 100, 400);
 
             Assert.IsTrue(img.Equals(img.Clone()));
             Assert.AreEqual(img.GetHashCode(), img.Clone().GetHashCode());
+
+        }
+
+        [Test]
+        public void TestFullSlice()
+        {
+            var arr = new double[40_000];
+            for (var i = 0; i < arr.Length; i++)
+                arr[i] = _r.Next(-100_000, 100_000);
+
+
+            var img = new Image<double>(arr, 100, 400);
+
+            var slice = img.Slice(x => true);
+
+            Assert.AreEqual(img.Size, slice.Size);
+            Assert.AreEqual(img.Max(), slice.Max());
+            Assert.AreEqual(img.Min(), slice.Min());
+            Assert.AreEqual(img.Percentile(0.66), slice.Percentile(0.66));
+        }
+
+        [Test]
+        public void TestSlice()
+        {
+            var arr = new int[40_000];
+            for (var i = 0; i < arr.Length; i++)
+                arr[i] = _r.Next(-100_000, 100_000);
+
+
+            var img = new Image<int>(arr, 100, 400);
+
+            var max = img.Max();
+            var min = img.Min();
+
+            var slice = img.Slice(x => x == max);
+            
+            Assert.AreEqual(img.Max(), slice.Max());
+            Assert.AreEqual(slice.Max(), slice.Min());
+            Assert.AreEqual(max, slice[0]);
+
+            slice = img.Slice(x => x == min);
+            Assert.AreEqual(img.Min(), slice.Min());
+            Assert.AreEqual(slice.Max(), slice.Min());
+            Assert.AreEqual(min, slice[0]);
+
+            slice = img.Slice(x => x == min || x == max);
+            Assert.AreEqual(img.Min(), slice.Min());
+            Assert.AreEqual(img.Max(), slice.Max());
 
         }
     }
