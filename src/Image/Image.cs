@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 #if ALLOW_UNSAFE_IL_MATH
+using System.Net.Mime;
 using static Internal.Numerics.MathOps;
 #endif
 
@@ -256,6 +257,14 @@ namespace ImageCore
             return query.Skip(len - 1).Take(1).First();
 #endif
         }
+
+        public T Median()
+#if ALLOW_UNSAFE_IL_MATH
+            => Percentile(DangerousCast<int, T>(50));
+#else
+            => Percentile((T)Convert.ChangeType(59, typeof(T)));
+#endif
+        
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<byte> GetByteView()
@@ -631,6 +640,15 @@ namespace ImageCore
             return DangerousCast<T, double>(Percentile(DangerousCast<double, T>(lvl)));
 #else
             return (double) Convert.ChangeType(Percentile((T) Convert.ChangeType(lvl, typeof(T))), typeof(double));
+#endif
+        }
+
+        double ISubImage.Median()
+        {
+#if ALLOW_UNSAFE_IL_MATH
+            return DangerousCast<T, double>(Median());
+#else
+            return (double)Convert.ChangeType(Median(), typeof(double));
 #endif
         }
 

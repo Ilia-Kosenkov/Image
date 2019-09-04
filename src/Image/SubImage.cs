@@ -136,6 +136,13 @@ namespace ImageCore
 #endif
         }
 
+        public T Median()
+#if ALLOW_UNSAFE_IL_MATH
+            => Percentile(DangerousCast<int, T>(50));
+#else
+            => Percentile((T)Convert.ChangeType(59, typeof(T)));
+#endif
+
         double ISubImage.Min()
 #if ALLOW_UNSAFE_IL_MATH
             => DangerousCast<T, double>(Min());
@@ -155,6 +162,15 @@ namespace ImageCore
             return DangerousCast<T, double>(Percentile(DangerousCast<double, T>(lvl)));
 #else
             return (double) Convert.ChangeType(Percentile((T) Convert.ChangeType(lvl, typeof(T))), typeof(double));
+#endif
+        }
+
+        double ISubImage.Median()
+        {
+#if ALLOW_UNSAFE_IL_MATH
+            return DangerousCast<T, double>(Median());
+#else
+            return (double)Convert.ChangeType(Median(), typeof(double));
 #endif
         }
 

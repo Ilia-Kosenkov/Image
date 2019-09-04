@@ -10,5 +10,6 @@ namespace ImageCore
         new T Min();
 
         T Percentile(T lvl);
+        new T Median();
     }
 }

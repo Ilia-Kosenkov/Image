@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
@@ -241,5 +243,29 @@ namespace Tests
             Assert.AreEqual(img.Max(), slice.Max());
 
         }
+
+        [TestCase(0.25)]
+        [TestCase(0.50)]
+        [TestCase(0.75)]
+
+        [Test]
+        public void TestPercentile(double p)
+        {
+            var arr = new double[40_000];
+            for (var i = 0; i < arr.Length; i++)
+                arr[i] = _r.Next(-100_000, 100_000);
+
+
+            var img = new Image<double>(arr, 100, 400);
+            Assert.AreEqual(img.Min(), img.Percentile(0));
+
+            Assert.AreEqual(img.Max(), img.Percentile(100));
+            var med1 = img.Percentile(100.0 * p);
+
+            var med2 = arr.OrderBy(x => x).Skip((int) (p * img.Size) - 1).First();
+            Assert.AreEqual(med2, med1);
+            Assert.AreEqual(img.Median(), ((IImage) img).Median());
+        }
     }
+ 
 }

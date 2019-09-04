@@ -6,6 +6,6 @@
         double Min();
         double Max();
         double Percentile(double lvl);
-       
+        double Median();
     }
 }
