@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Image
+namespace ImageCore
 {
     internal class Comparer<T> : IComparer<T>
         where T : unmanaged, IComparable<T>

@@ -2,7 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
-using Image;
+using ImageCore;
 using NUnit.Framework;
 using Internal.Numerics;
 using MathNet.Numerics;
@@ -131,12 +131,11 @@ namespace Tests
         [Test]
         public void TestSerialize()
         {
-            var arr = new double[40_000];
-            for (var i = 0; i < arr.Length; i++)
-                arr[i] = _r.Next(-100_000, 100_000);
-
-
-            var img = new Image<double>(arr, 200, 200);
+            var img = Image.Create<double>(x =>
+            {
+                for (var i = 0; i < 40_000; i++)
+                    x[i] = _r.Next(-100_000, 100_000);
+            }, 100, 400);
 
             using var mem = new MemoryStream();
             var f = new BinaryFormatter();
@@ -186,12 +185,11 @@ namespace Tests
         [Test]
         public void TestCloning()
         {
-            var arr = new double[40_000];
-            for (var i = 0; i < arr.Length; i++)
-                arr[i] = _r.Next(-100_000, 100_000);
-
-
-            var img = new Image<double>(arr, 100, 400);
+            var img = Image.Create<double>(x =>
+            {
+                for (var i = 0; i < 40_000; i++)
+                    x[i] = _r.Next(-100_000, 100_000);
+            }, 100, 400);
 
             Assert.IsTrue(img.Equals(img.Clone()));
             Assert.AreEqual(img.GetHashCode(), img.Clone().GetHashCode());
@@ -201,12 +199,11 @@ namespace Tests
         [Test]
         public void TestFullSlice()
         {
-            var arr = new double[40_000];
-            for (var i = 0; i < arr.Length; i++)
-                arr[i] = _r.Next(-100_000, 100_000);
-
-
-            var img = new Image<double>(arr, 100, 400);
+            var img = Image.Create<double>(x =>
+            {
+                for (var i = 0; i < 40_000; i++)
+                    x[i] = _r.Next(-100_000, 100_000);
+            }, 100, 400);
 
             var slice = img.Slice(x => true);
 
@@ -219,12 +216,11 @@ namespace Tests
         [Test]
         public void TestSlice()
         {
-            var arr = new int[40_000];
-            for (var i = 0; i < arr.Length; i++)
-                arr[i] = _r.Next(-100_000, 100_000);
-
-
-            var img = new Image<int>(arr, 100, 400);
+            var img = Image.Create<int>(x =>
+            {
+                for (var i = 0; i < 40_000; i++)
+                    x[i] = _r.Next(-100_000, 100_000);
+            }, 100, 400);
 
             var max = img.Max();
             var min = img.Min();

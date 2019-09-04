@@ -11,32 +11,55 @@ using System.Runtime.Serialization;
 using static Internal.Numerics.MathOps;
 #endif
 
-namespace Image
+namespace ImageCore
 {
     public abstract class Image
     {
+        public delegate void Initializer<T>(Span<T> span)
+            where T : unmanaged, IComparable<T>;
+
         public static IImmutableList<Type> AllowedTypes { get; } =
             new[] 
             {
                 typeof(double),
                 typeof(float),
-                typeof(byte),
-                typeof(ushort),
+                typeof(ulong),
                 typeof(uint),
-                typeof(sbyte),
-                typeof(short),
+                typeof(ushort),
+                typeof(byte),
+                typeof(long),
                 typeof(int),
+                typeof(short),
+                typeof(sbyte),
             }.ToImmutableList();
+        private protected static void ThrowIfTypeMismatch<T>()
+        {
+            if (!AllowedTypes.Contains(typeof(T)))
+                throw new NotSupportedException(typeof(T).ToString());
+        }
+
+        public static IImage<T> Create<T>(Initializer<T> init, int height, int width)
+            where T : unmanaged, IComparable<T>
+        {
+            if (init is null)
+                throw new ArgumentNullException(nameof(init));
+            var img = new Image<T>(height, width);
+            init(img.RawView);
+            return img;
+        }
+
     }
 
     [Serializable]
-    public class Image<T> : Image, IImage<T> 
+    public sealed class Image<T> : Image, IImage<T> 
         where T : unmanaged, IComparable<T>
     {
  
         private readonly T[] _data;
         private T? _max;
         private T? _min;
+
+        internal Span<T> RawView => _data;
 
         public long Size => Height * Width;
 
@@ -54,9 +77,23 @@ namespace Image
             ? throw new ArgumentOutOfRangeException(nameof(i))
             : _data[i];
 
+        internal Image(int height, int width)
+        {
+            ThrowIfTypeMismatch<T>();
+
+            if (width < 1)
+                throw new ArgumentOutOfRangeException(nameof(width));
+            if (width < 1)
+                throw new ArgumentOutOfRangeException(nameof(height));
+
+            _data = new T[width * height];
+            Width = width;
+            Height = height;
+        }
+
         public Image(ReadOnlySpan<T> data, int height, int width)
         {
-           ThrowIfTypeMismatch();
+           ThrowIfTypeMismatch<T>();
 
             if(width < 1)
                 throw new ArgumentOutOfRangeException(nameof(width));
@@ -75,7 +112,7 @@ namespace Image
 
         public Image(ReadOnlySpan<byte> byteData, int height, int width)
         {
-            ThrowIfTypeMismatch();
+            ThrowIfTypeMismatch<T>();
 
             if (width < 1)
                 throw new ArgumentOutOfRangeException(nameof(width));
@@ -100,7 +137,7 @@ namespace Image
 
         public Image(SerializationInfo info, StreamingContext context)
         {
-            ThrowIfTypeMismatch();
+            ThrowIfTypeMismatch<T>();
 
 
             // WATCH : Weak type checks
@@ -623,15 +660,10 @@ namespace Image
             info.AddValue("ByteData", GetByteView().ToArray());
         }
 
-        public static ISubImage<T> Zero(int height, int width)
-            => new Image<T>(new T[width * height], height, width);
+        public static IImage<T> Zero(int height, int width)
+            => new Image<T>(height, width);
 
-        private static void ThrowIfTypeMismatch()
-        {
-            if (!AllowedTypes.Contains(typeof(T)))
-                throw new NotSupportedException(typeof(T).ToString());
-        }
-
+        
 
     }
 }

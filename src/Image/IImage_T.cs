@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Image
+namespace ImageCore
 {
     public interface IImage<T> : IEquatable<IImage<T>>, ISubImage<T>, IViewable<T>, IEnumerable<T>, IImage
         where T : unmanaged, IComparable<T>

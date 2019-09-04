@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 
-namespace Image
+namespace ImageCore
 {
     public interface IImage : ISubImage, IViewable, ICloneable, IEquatable<IImage>, ISerializable, IEnumerable
     {

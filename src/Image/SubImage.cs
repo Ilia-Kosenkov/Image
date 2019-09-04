@@ -4,7 +4,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using static Internal.Numerics.MathOps;
 
-namespace Image
+namespace ImageCore
 {
     public sealed class SubImage<T> : ISubImage<T>
         where T : unmanaged, IComparable<T>

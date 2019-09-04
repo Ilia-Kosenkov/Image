@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Image
+namespace ImageCore
 {
     public interface IViewable<T> where T : unmanaged, IComparable<T>
     {

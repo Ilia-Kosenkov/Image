@@ -1,4 +1,4 @@
-﻿namespace Image
+﻿namespace ImageCore
 {
     public interface ISubImage
     {

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Image.Internals
+namespace ImageCore.Internals
 {
     internal interface IHashGenerator
     {

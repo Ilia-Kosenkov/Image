@@ -2,7 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace Image.Internals
+namespace ImageCore.Internals
 {
     internal sealed class CRC32Generator : IHashGenerator
     {
