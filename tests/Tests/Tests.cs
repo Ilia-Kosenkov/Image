@@ -197,6 +197,28 @@ namespace Tests
         }
 
         [Test]
+        public void TestEquals()
+        {
+            var img = Image.Create<double>(x =>
+            {
+                for (var i = 0; i < 40_000; i++)
+                    x[i] = _r.Next(-100_000, 100_000);
+            }, 100, 400);
+
+            var other = img.Copy();
+
+            Assert.IsTrue(img.Equals(other));
+            Assert.IsTrue(img.Equals((IImage) other));
+            Assert.IsTrue(img.Equals((object) other));
+            Assert.IsTrue(img.BitwiseEquals(other));
+
+            Assert.IsFalse(img.Equals((object) null));
+            Assert.IsFalse(img.Equals((IImage)null));
+            Assert.IsFalse(img.Equals(null));
+            Assert.IsFalse(img.BitwiseEquals(null));
+
+        }
+        [Test]
         public void TestFullSlice()
         {
             var img = Image.Create<double>(x =>
@@ -242,6 +264,8 @@ namespace Tests
             slice = img.Slice(x => x == min || x == max);
             Assert.AreEqual(img.Min(), slice.Min());
             Assert.AreEqual(img.Max(), slice.Max());
+            Assert.AreEqual(((ISubImage)img).Min(), ((ISubImage)slice).Min());
+            Assert.AreEqual(((ISubImage)img).Max(), ((ISubImage)slice).Max());
 
             slice = img.Slice((i, j, _) => (i + j) > 0);
 
@@ -258,20 +282,42 @@ namespace Tests
         [Test]
         public void TestPercentile(double p)
         {
-            var arr = new double[40_000];
+            var arr = new int[40_000];
             for (var i = 0; i < arr.Length; i++)
                 arr[i] = _r.Next(-100_000, 100_000);
 
 
-            var img = new Image<double>(arr, 100, 400);
-            Assert.AreEqual(img.Min(), img.Percentile(0));
+            var img = new Image<int>(arr, 100, 400);
+            Assert.AreEqual(((ISubImage)img).Min(), ((ISubImage)img).Percentile(0));
 
-            Assert.AreEqual(img.Max(), img.Percentile(100));
-            var med1 = img.Percentile(100.0 * p);
+            Assert.AreEqual(((ISubImage)img).Max(), ((ISubImage)img).Percentile(100));
+            var med1 = img.Percentile((int)(100 * p));
 
             var med2 = arr.OrderBy(x => x).Skip((int) (p * img.Size) - 1).First();
             Assert.AreEqual(med2, med1);
-            Assert.AreEqual(img.Median(), ((IImage) img).Median());
+            Assert.AreEqual(((ISubImage)img).Median(), ((ISubImage) img).Median());
+        }
+
+        [Test]
+        public void TestThrows()
+        {
+            Assert.That(() => Image.Create<double>(null, 1, 1), Throws.ArgumentNullException);
+            Assert.That(() => Image.Create<char>((_) => { }, 1, 1), Throws.InstanceOf<NotSupportedException>());
+            Assert.That(() => Image.Create<int>((_) => { }, -1, 1), Throws.InstanceOf<ArgumentOutOfRangeException>());
+            Assert.That(() => Image.Create<int>((_) => { }, 1, -1), Throws.InstanceOf<ArgumentOutOfRangeException>());
+
+            Assert.That(() => new Image<char>(ReadOnlySpan<char>.Empty, 1, 1), Throws.InstanceOf<NotSupportedException>());
+            Assert.That(() => new Image<char>(ReadOnlySpan<byte>.Empty, 1, 1), Throws.InstanceOf<NotSupportedException>());
+
+            Assert.That(() => new Image<int>(ReadOnlySpan<int>.Empty, -1, 1), Throws.InstanceOf<ArgumentOutOfRangeException>());
+            Assert.That(() => new Image<int>(ReadOnlySpan<int>.Empty,  1, -1), Throws.InstanceOf<ArgumentOutOfRangeException>());
+            Assert.That(() => new Image<int>(ReadOnlySpan<int>.Empty, 1, 1), Throws.ArgumentException);
+
+
+            Assert.That(() => new Image<int>(ReadOnlySpan<byte>.Empty, -1, 1), Throws.InstanceOf<ArgumentOutOfRangeException>());
+            Assert.That(() => new Image<int>(ReadOnlySpan<byte>.Empty, 1, -1), Throws.InstanceOf<ArgumentOutOfRangeException>());
+            Assert.That(() => new Image<int>(ReadOnlySpan<byte>.Empty, 1, 1), Throws.ArgumentException);
+
         }
     }
  

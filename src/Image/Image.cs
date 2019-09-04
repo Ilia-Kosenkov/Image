@@ -86,7 +86,7 @@ namespace ImageCore
 
             if (width < 1)
                 throw new ArgumentOutOfRangeException(nameof(width));
-            if (width < 1)
+            if (height < 1)
                 throw new ArgumentOutOfRangeException(nameof(height));
 
             _data = new T[width * height];
@@ -100,7 +100,7 @@ namespace ImageCore
 
             if(width < 1)
                 throw new ArgumentOutOfRangeException(nameof(width));
-            if (width < 1)
+            if (height < 1)
                 throw new ArgumentOutOfRangeException(nameof(height));
 
             // Size mismatch
@@ -131,8 +131,7 @@ namespace ImageCore
             _data = new T[width * height];
 
 
-            if (!MemoryMarshal.Cast<byte, T>(byteData).TryCopyTo(_data))
-                throw new InvalidOperationException();
+            MemoryMarshal.Cast<byte, T>(byteData).CopyTo(_data);
 
             Width = width;
             Height = height;
@@ -168,8 +167,7 @@ namespace ImageCore
             _data = new T[width * height];
 
 
-            if (!MemoryMarshal.Cast<byte, T>(byteData).TryCopyTo(_data))
-                throw new InvalidOperationException();
+            MemoryMarshal.Cast<byte, T>(byteData).CopyTo(_data);
 
             Width = width;
             Height = height;
