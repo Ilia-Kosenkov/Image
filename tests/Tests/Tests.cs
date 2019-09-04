@@ -213,16 +213,19 @@ namespace Tests
             Assert.AreEqual(img.Max(), slice.Max());
             Assert.AreEqual(img.Min(), slice.Min());
             Assert.AreEqual(img.Percentile(0.66), slice.Percentile(0.66));
+            Assert.AreEqual(img.Average(), slice.Average());
+            Assert.AreEqual(img.Var(), slice.Var());
+
         }
 
         [Test]
         public void TestSlice()
         {
-            var img = Image.Create<int>(x =>
+            var img = Image.Create<long>(x =>
             {
-                for (var i = 0; i < 40_000; i++)
-                    x[i] = _r.Next(-100_000, 100_000);
-            }, 100, 400);
+                for (var i = 0; i < 4_000; i++)
+                    x[i] = _r.Next(-1_000, 1_000);
+            }, 100, 40);
 
             var max = img.Max();
             var min = img.Min();
@@ -241,6 +244,13 @@ namespace Tests
             slice = img.Slice(x => x == min || x == max);
             Assert.AreEqual(img.Min(), slice.Min());
             Assert.AreEqual(img.Max(), slice.Max());
+
+            slice = img.Slice((i, j, _) => (i + j) > 0);
+
+            Assert.AreEqual(img.Average(), slice.Average(), 5);
+            Assert.AreEqual(
+                img.Var(), 
+                slice.Var(), 5e1);
 
         }
 

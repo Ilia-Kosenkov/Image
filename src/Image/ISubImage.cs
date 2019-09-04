@@ -7,5 +7,7 @@
         double Max();
         double Percentile(double lvl);
         double Median();
+        double Average();
+        double Var();
     }
 }

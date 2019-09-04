@@ -11,5 +11,8 @@ namespace ImageCore
 
         T Percentile(T lvl);
         new T Median();
+
+        new T Var();
+        new T Average();
     }
 }

@@ -59,6 +59,9 @@ namespace ImageCore
         private readonly T[] _data;
         private T? _max;
         private T? _min;
+        private T? _average;
+        private T? _var;
+        private T? _median;
 
         internal Span<T> RawView => _data;
 
@@ -258,13 +261,103 @@ namespace ImageCore
 #endif
         }
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public T Median()
+        {
+            if (_median is null)
+            {
 #if ALLOW_UNSAFE_IL_MATH
-            => Percentile(DangerousCast<int, T>(50));
+                _median = Percentile(DangerousCast<int, T>(50));
 #else
-            => Percentile((T)Convert.ChangeType(59, typeof(T)));
+            _median = Percentile((T)Convert.ChangeType(50, typeof(T)));
 #endif
-        
+            }
+
+            return _median.Value;
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public T Average()
+        {
+            if (_average is null)
+            {
+#if ALLOW_UNSAFE_IL_MATH
+                T temp = default;
+                foreach (var item in _data)
+                    temp = DangerousAdd(temp, item);
+
+                _average = DangerousDivide(temp, DangerousCast<long, T>(Size));
+#else
+                dynamic temp = default(T);
+                foreach (var item in _data)
+                    temp += item;
+
+                _average = temp / Size;
+#endif
+            }
+
+            return _average.Value;
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public T Var()
+        {
+            if (_var is null)
+            {
+#if ALLOW_UNSAFE_IL_MATH
+                T temp = default;
+                var avg = Average();
+
+                if (Size > 1)
+                {
+                    var diff1 = DangerousSubtract(_data[0], avg);
+                    var diff2 = DangerousSubtract(_data[1], avg);
+
+                    var mul1 = DangerousMultiply(diff1, diff1);
+                    var mul2 = DangerousMultiply(diff2, diff2);
+
+                    temp = DangerousAdd(mul1, mul2);
+
+                }
+
+                for (var i = 2; i < Size; i++)
+                { 
+                    var diff = DangerousSubtract(_data[i], avg);
+                    var mul = DangerousMultiply(diff, diff);
+                    temp = DangerousDivide(DangerousAdd(DangerousMultiply(temp, DangerousCast<int, T>(i - 1)), mul),
+                        DangerousCast<int, T>(i));
+                }
+
+               
+#else
+                dynamic temp = default;
+                dynamic avg = Average();
+
+                if (Size > 1)
+                {
+                    var diff1 = _data[0] - avg;
+                    var diff2 = _data[1] - avg;
+
+                    var mul1 = diff1 * diff1;
+                    var mul2 = diff2 * diff2;
+
+                    temp = mul1 + mul2;
+
+                }
+
+                for (var i = 2; i < Size; i++)
+                {
+                    var diff = _data[i] - avg;
+                    var mul = diff * diff;
+                    temp = (temp * (i - 1) + mul) / i;
+                }
+#endif
+                _var = temp;
+            }
+
+            return _var.Value;
+        }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<byte> GetByteView()
@@ -567,7 +660,7 @@ namespace ImageCore
         public object Clone() => Copy();
 
 
-        #region IImage
+#region IImage
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         IImage IImage.Add(IImage other)
@@ -633,7 +726,6 @@ namespace ImageCore
 #endif
         }
 
-      
         double ISubImage.Percentile(double lvl)
         {
 #if ALLOW_UNSAFE_IL_MATH
@@ -652,7 +744,25 @@ namespace ImageCore
 #endif
         }
 
-#endregion
+        double ISubImage.Var()
+        {
+#if ALLOW_UNSAFE_IL_MATH
+            return DangerousCast<T, double>(Var());
+#else
+            return (double)Convert.ChangeType(Var(), typeof(double));
+#endif
+        }
+
+        double ISubImage.Average()
+        {
+#if ALLOW_UNSAFE_IL_MATH
+            return DangerousCast<T, double>(Average());
+#else
+            return (double)Convert.ChangeType(Average(), typeof(double));
+#endif
+        }
+
+        #endregion
 
         public IEnumerator<T> GetEnumerator()
             => (_data as IEnumerable<T>).GetEnumerator();

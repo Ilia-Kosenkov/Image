@@ -14,6 +14,9 @@ namespace ImageCore
 
         private T? _max;
         private T? _min;
+        private T? _average;
+        private T? _var;
+        private T? _median;
 
         public long Size => _indexes.Count;
 
@@ -136,12 +139,72 @@ namespace ImageCore
 #endif
         }
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public T Median()
+        {
+            if (_median is null)
+            {
 #if ALLOW_UNSAFE_IL_MATH
-            => Percentile(DangerousCast<int, T>(50));
+                _median = Percentile(DangerousCast<int, T>(50));
 #else
-            => Percentile((T)Convert.ChangeType(59, typeof(T)));
+            _median = Percentile((T)Convert.ChangeType(50, typeof(T)));
 #endif
+            }
+
+            return _median.Value;
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public T Average()
+        {
+            if (_average is null)
+            {
+#if ALLOW_UNSAFE_IL_MATH
+                T temp = default;
+                foreach (var item in _indexes.Select(x => _sourceImage[x.I, x.J]))
+                    temp = DangerousAdd(temp, item);
+
+                _average = DangerousDivide(temp, DangerousCast<long, T>(Size));
+#else
+                dynamic temp = default(T);
+                foreach (var item in _indexes.Select(x => _sourceImage[x.I, x.J]))
+                    temp += item;
+
+                _average = temp / Size;
+#endif
+            }
+
+            return _average.Value;
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public T Var()
+        {
+            if (_var is null)
+            {
+#if ALLOW_UNSAFE_IL_MATH
+                T temp = default;
+                var avg = Average();
+
+                foreach (var item in _indexes.Select(x => _sourceImage[x.I, x.J]))
+                {
+                    var diff = DangerousSubtract(item, avg);
+                    temp = DangerousAdd(temp, DangerousMultiply(diff, diff));
+                }
+
+                _var = DangerousDivide(temp, DangerousCast<long, T>(Size - 1));
+#else
+                dynamic temp = default(T);
+                dynamic avg = Average();
+                foreach (var item in _indexes.Select(x => _sourceImage[x.I, x.J]))
+                    temp += (item - avg) * (item - avg);
+
+                _var = temp / (Size - 1);
+#endif
+            }
+
+            return _var.Value;
+        }
 
         double ISubImage.Min()
 #if ALLOW_UNSAFE_IL_MATH
@@ -156,14 +219,6 @@ namespace ImageCore
             => (double) Convert.ChangeType(Max(), typeof(double));
 #endif
 
-        public double Percentile(double lvl)
-        {
-#if ALLOW_UNSAFE_IL_MATH
-            return DangerousCast<T, double>(Percentile(DangerousCast<double, T>(lvl)));
-#else
-            return (double) Convert.ChangeType(Percentile((T) Convert.ChangeType(lvl, typeof(T))), typeof(double));
-#endif
-        }
 
         double ISubImage.Median()
         {
@@ -173,6 +228,35 @@ namespace ImageCore
             return (double)Convert.ChangeType(Median(), typeof(double));
 #endif
         }
+
+        double ISubImage.Var()
+        {
+#if ALLOW_UNSAFE_IL_MATH
+            return DangerousCast<T, double>(Var());
+#else
+            return (double)Convert.ChangeType(Var(), typeof(double));
+#endif
+        }
+
+        double ISubImage.Average()
+        {
+#if ALLOW_UNSAFE_IL_MATH
+            return DangerousCast<T, double>(Average());
+#else
+            return (double)Convert.ChangeType(Average(), typeof(double));
+#endif
+        }
+
+
+        public double Percentile(double lvl)
+        {
+#if ALLOW_UNSAFE_IL_MATH
+            return DangerousCast<T, double>(Percentile(DangerousCast<double, T>(lvl)));
+#else
+            return (double) Convert.ChangeType(Percentile((T) Convert.ChangeType(lvl, typeof(T))), typeof(double));
+#endif
+        }
+
 
     }
 }
