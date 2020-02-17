@@ -52,8 +52,8 @@ namespace ImageCore
         {
             if (_max is null)
             {
-                var ind = _indexes[0];
-                var maxVal = _sourceImage[ind.I, ind.J];
+                var (i0, j0) = _indexes[0];
+                var maxVal = _sourceImage[i0, j0];
 
                 for (var index = 1; index < Size; index++)
                 {
@@ -74,8 +74,8 @@ namespace ImageCore
         {
             if (_min is null)
             {
-                var ind = _indexes[0];
-                var minVal = _sourceImage[ind.I, ind.J];
+                var (i0, j0) = _indexes[0];
+                var minVal = _sourceImage[i0, j0];
 
                 for (var index = 1; index < Size; index++)
                 {

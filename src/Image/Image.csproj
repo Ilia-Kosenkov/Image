@@ -3,11 +3,12 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <RootNamespace>ImageCore</RootNamespace>
-    <AssemblyVersion>1.2.3.0</AssemblyVersion>
-    <FileVersion>1.2.3.0</FileVersion>
+    <AssemblyVersion>1.2.15.0</AssemblyVersion>
+    <FileVersion>1.2.15.0</FileVersion>
     <LangVersion>8.0</LangVersion>
-    <Version>1.2.3</Version>
+    <Version>1.2.15</Version>
     <Nullable>enable</Nullable>
+    <Platforms>AnyCPU;x64;x86</Platforms>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -24,9 +25,61 @@
     <InheritWinAppVersionFrom>None</InheritWinAppVersionFrom>
     <AssemblyFileVersionSettings>IncrementOnDemand.IncrementOnDemand.IncrementWithResetOnIncrease.None</AssemblyFileVersionSettings>
     <PackageVersionSettings>AssemblyVersion.IncrementWithAutoReset.None</PackageVersionSettings>
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DefineConstants>TRACE;ALLOW_UNSAFE_IL_MATH</DefineConstants>
+    <ShouldCreateLogs>True</ShouldCreateLogs>
+    <AdvancedSettingsExpanded>False</AdvancedSettingsExpanded>
+    <UpdateAssemblyVersion>True</UpdateAssemblyVersion>
+    <UpdateAssemblyFileVersion>True</UpdateAssemblyFileVersion>
+    <UpdateAssemblyInfoVersion>False</UpdateAssemblyInfoVersion>
+    <AssemblyVersionSettings>IncrementOnDemand.IncrementOnDemand.IncrementWithResetOnIncrease.None</AssemblyVersionSettings>
+    <UpdatePackageVersion>True</UpdatePackageVersion>
+    <AssemblyInfoVersionType>SettingsVersion</AssemblyInfoVersionType>
+    <InheritWinAppVersionFrom>None</InheritWinAppVersionFrom>
+    <AssemblyFileVersionSettings>IncrementOnDemand.IncrementOnDemand.IncrementWithResetOnIncrease.None</AssemblyFileVersionSettings>
+    <PackageVersionSettings>AssemblyVersion.IncrementWithAutoReset.None</PackageVersionSettings>
+    <PlatformTarget>x86</PlatformTarget>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DefineConstants>TRACE;ALLOW_UNSAFE_IL_MATH</DefineConstants>
+    <ShouldCreateLogs>True</ShouldCreateLogs>
+    <AdvancedSettingsExpanded>False</AdvancedSettingsExpanded>
+    <UpdateAssemblyVersion>True</UpdateAssemblyVersion>
+    <UpdateAssemblyFileVersion>True</UpdateAssemblyFileVersion>
+    <UpdateAssemblyInfoVersion>False</UpdateAssemblyInfoVersion>
+    <AssemblyVersionSettings>IncrementOnDemand.IncrementOnDemand.IncrementWithResetOnIncrease.None</AssemblyVersionSettings>
+    <UpdatePackageVersion>True</UpdatePackageVersion>
+    <AssemblyInfoVersionType>SettingsVersion</AssemblyInfoVersionType>
+    <InheritWinAppVersionFrom>None</InheritWinAppVersionFrom>
+    <AssemblyFileVersionSettings>IncrementOnDemand.IncrementOnDemand.IncrementWithResetOnIncrease.None</AssemblyFileVersionSettings>
+    <PackageVersionSettings>AssemblyVersion.IncrementWithAutoReset.None</PackageVersionSettings>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DefineConstants>TRACE;ALLOW_UNSAFE_IL_MATH</DefineConstants>
+    <ShouldCreateLogs>True</ShouldCreateLogs>
+    <AdvancedSettingsExpanded>False</AdvancedSettingsExpanded>
+    <UpdateAssemblyVersion>True</UpdateAssemblyVersion>
+    <UpdateAssemblyFileVersion>True</UpdateAssemblyFileVersion>
+    <UpdateAssemblyInfoVersion>False</UpdateAssemblyInfoVersion>
+    <AssemblyVersionSettings>IncrementOnDemand.IncrementOnDemand.IncrementWithResetOnIncrease.None</AssemblyVersionSettings>
+    <UpdatePackageVersion>True</UpdatePackageVersion>
+    <AssemblyInfoVersionType>SettingsVersion</AssemblyInfoVersionType>
+    <InheritWinAppVersionFrom>None</InheritWinAppVersionFrom>
+    <AssemblyFileVersionSettings>IncrementOnDemand.IncrementOnDemand.IncrementWithResetOnIncrease.None</AssemblyFileVersionSettings>
+    <PackageVersionSettings>AssemblyVersion.IncrementWithAutoReset.None</PackageVersionSettings>
+    <PlatformTarget>x86</PlatformTarget>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <DefineConstants>TRACE;ALLOW_UNSAFE_IL_MATH</DefineConstants>
     <ShouldCreateLogs>True</ShouldCreateLogs>
@@ -43,20 +96,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MathNet.Numerics" Version="4.8.1" />
-    <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
-    <PackageReference Include="System.Collections.Immutable" Version="1.5.0" />
+    <PackageReference Include="MathNet.Numerics" Version="4.9.0" />
+    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+    <PackageReference Include="System.Collections.Immutable" Version="1.7.0" />
     <PackageReference Include="System.Memory" Version="4.5.3" />
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.5.2" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="Internal.Numerics">
-      <HintPath>..\..\..\Internal\src\Numerics\bin\Debug\netstandard2.0\Internal.Numerics.dll</HintPath>
-    </Reference>
-    <Reference Include="Internal.UnsafeNumerics">
-      <HintPath>..\..\..\Internal\src\UnsafeNumerics\bin\Debug\netstandard2.0\Internal.UnsafeNumerics.dll</HintPath>
-    </Reference>
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.7.0" />
+    <PackageReference Include="UnsafeNumerics" Version="0.1.6" />
   </ItemGroup>
  
 </Project>
