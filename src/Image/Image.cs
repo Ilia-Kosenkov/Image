@@ -275,57 +275,49 @@ namespace ImageCore
 
         public IImage<T> Transpose()
         {
-            using (var mem = MemoryPool<T>.Shared.Rent(Width * Height))
-            {
-                var span = mem.Memory.Span.Slice(0, Width * Height);
+            using var mem = MemoryPool<T>.Shared.Rent(Width * Height);
+            var span = mem.Memory.Span.Slice(0, Width * Height);
                 
-                for(var i = 0; i < Height; i++)
-                for (var j = 0; j < Width; j++)
-                    span[j * Height + i] = _data[i * Width + j];
+            for(var i = 0; i < Height; i++)
+            for (var j = 0; j < Width; j++)
+                span[j * Height + i] = _data[i * Width + j];
 
-                return  new Image<T>(span, Width, Height);
-            }
+            return  new Image<T>(span, Width, Height);
         }
 
         public IImage<TOther> CastTo<TOther>() where TOther 
             : unmanaged, IComparable<TOther>, IEquatable<TOther>
         {
-            using (var pool = MemoryPool<TOther>.Shared.Rent(Width * Height))
-            {
-                var span = pool.Memory.Span.Slice(0, Width * Height);
-                for (var i = 0; i < _data.Length; i++)
-                    span[i] = DangerousCast<T, TOther>(_data[i]);
-                return new Image<TOther>(span, Height, Width);
-            }
+            using var pool = MemoryPool<TOther>.Shared.Rent(Width * Height);
+            var span = pool.Memory.Span.Slice(0, Width * Height);
+            for (var i = 0; i < _data.Length; i++)
+                span[i] = DangerousCast<T, TOther>(_data[i]);
+            return new Image<TOther>(span, Height, Width);
         }
 
         public IImage<TOther> CastTo<TOther>(Func<T, TOther> caster) 
             where TOther : unmanaged, IComparable<TOther>, IEquatable<TOther>
         {
-            using (var pool = MemoryPool<TOther>.Shared.Rent(Width * Height))
-            {
-                var span = pool.Memory.Span.Slice(0, Width * Height);
-                for (var i = 0; i < _data.Length; i++)
-                    span[i] = caster(_data[i]);
+            using var pool = MemoryPool<TOther>.Shared.Rent(Width * Height);
+            var span = pool.Memory.Span.Slice(0, Width * Height);
+            for (var i = 0; i < _data.Length; i++)
+                span[i] = caster(_data[i]);
 
-                return new Image<TOther>(span, Height, Width);
-            }
+            return new Image<TOther>(span, Height, Width);
         }
 
         public IImage<T> Clamp(T low, T high)
         {
-            using (var mem = MemoryPool<T>.Shared.Rent(Width * Height))
-            {
-                var span = mem.Memory.Span.Slice(0, Width * Height);
-                _data.AsSpan().CopyTo(span);
+            using var mem = MemoryPool<T>.Shared.Rent(Width * Height);
+            var span = mem.Memory.Span.Slice(0, Width * Height);
+            _data.AsSpan().CopyTo(span);
 
-                foreach (ref var item in span)
-                    if (DangerousLessThan(item, low))
-                        item = low;
-                    else if(DangerousGreaterThan(item ,high))
-                        item = high;
-                return new Image<T>(span, Height, Width);
-            }
+            foreach (ref var item in span)
+                if (DangerousLessThan(item, low))
+                    item = low;
+                else if(DangerousGreaterThan(item ,high))
+                    item = high;
+            return new Image<T>(span, Height, Width);
         }
 
         public IImage<T> Scale(T low, T high)
@@ -335,22 +327,21 @@ namespace ImageCore
             var enumer = DangerousSubtract(high, low);
             var denomer = DangerousSubtract(max, min);
 
-            using (var mem = MemoryPool<T>.Shared.Rent(Width * Height))
-            {
-                var span = mem.Memory.Span.Slice(0, Width * Height);
+            using var mem = MemoryPool<T>.Shared.Rent(Width * Height);
+            var span = mem.Memory.Span.Slice(0, Width * Height);
 
-                if (DangerousEquals(denomer, default))
-                {
-                    var filler = 
-                        DangerousDivide(
-                            DangerousAdd(low, high), 
-                            DangerousCast<int, T>(2));
-                    span.Fill(filler);
-                }
-                else
-                    for (var i = 0; i < _data.Length; i++)
-                        span[i] = 
-                            DangerousAdd(
+            if (DangerousEquals(denomer, default))
+            {
+                var filler = 
+                    DangerousDivide(
+                        DangerousAdd(low, high), 
+                        DangerousCast<int, T>(2));
+                span.Fill(filler);
+            }
+            else
+                for (var i = 0; i < _data.Length; i++)
+                    span[i] = 
+                        DangerousAdd(
                             DangerousDivide(
                                 DangerousMultiply(
                                     DangerousSubtract(_data[i], min), 
@@ -358,48 +349,37 @@ namespace ImageCore
                                 denomer), 
                             low);
 
-                return new Image<T>(span, Height, Width);
-            }
+            return new Image<T>(span, Height, Width);
         }
 
         public IImage<T> AddScalar(T item)
         {
+            using var mem = MemoryPool<T>.Shared.Rent(Width * Height);
+            var span = mem.Memory.Span.Slice(0, Width * Height);
 
-
-            using (var mem = MemoryPool<T>.Shared.Rent(Width * Height))
-            {
-                var span = mem.Memory.Span.Slice(0, Width * Height);
-
-                for (var i = 0; i < _data.Length; i++)
-                    span[i] = DangerousAdd(_data[i], item);
-                return new Image<T>(span, Height, Width);
-            }
+            for (var i = 0; i < _data.Length; i++)
+                span[i] = DangerousAdd(_data[i], item);
+            return new Image<T>(span, Height, Width);
         }
 
         public IImage<T> MultiplyBy(T item)
         {
+            using var mem = MemoryPool<T>.Shared.Rent(Width * Height);
+            var span = mem.Memory.Span.Slice(0, Width * Height);
 
-            using (var mem = MemoryPool<T>.Shared.Rent(Width * Height))
-            {
-                var span = mem.Memory.Span.Slice(0, Width * Height);
-
-                for (var i = 0; i < _data.Length; i++)
-                    span[i] = DangerousMultiply(_data[i], item);
-                return new Image<T>(span, Height, Width);
-            }
+            for (var i = 0; i < _data.Length; i++)
+                span[i] = DangerousMultiply(_data[i], item);
+            return new Image<T>(span, Height, Width);
         }
 
         public IImage<T> DivideBy(T item)
         {
+            using var mem = MemoryPool<T>.Shared.Rent(Width * Height);
+            var span = mem.Memory.Span.Slice(0, Width * Height);
 
-            using (var mem = MemoryPool<T>.Shared.Rent(Width * Height))
-            {
-                var span = mem.Memory.Span.Slice(0, Width * Height);
-
-                for (var i = 0; i < _data.Length; i++)
-                    span[i] = DangerousDivide(_data[i], item);
-                return new Image<T>(span, Height, Width);
-            }
+            for (var i = 0; i < _data.Length; i++)
+                span[i] = DangerousDivide(_data[i], item);
+            return new Image<T>(span, Height, Width);
         }
 
         public IImage<T> Add(IImage<T> other)
@@ -407,14 +387,12 @@ namespace ImageCore
             if (Width != other.Width && Height != other.Height)
                 throw new ArgumentException(nameof(other));
 
-            using (var mem = MemoryPool<T>.Shared.Rent(Width * Height))
-            {
-                var span = mem.Memory.Span.Slice(0, Width * Height);
-                var view = other.GetView();
-                for (var i = 0; i < _data.Length; i++)
-                    span[i] = DangerousAdd(_data[i], view[i]);
-                return new Image<T>(span, Height, Width);
-            }
+            using var mem = MemoryPool<T>.Shared.Rent(Width * Height);
+            var span = mem.Memory.Span.Slice(0, Width * Height);
+            var view = other.GetView();
+            for (var i = 0; i < _data.Length; i++)
+                span[i] = DangerousAdd(_data[i], view[i]);
+            return new Image<T>(span, Height, Width);
         }
 
         public IImage<T> Subtract(IImage<T> other)
@@ -422,14 +400,12 @@ namespace ImageCore
             if (Width != other.Width && Height != other.Height)
                 throw new ArgumentException(nameof(other));
 
-            using (var mem = MemoryPool<T>.Shared.Rent(Width * Height))
-            {
-                var span = mem.Memory.Span.Slice(0, Width * Height);
-                var view = other.GetView();
-                for (var i = 0; i < _data.Length; i++)
-                    span[i] = DangerousSubtract(_data[i], view[i]);
-                return new Image<T>(span, Height, Width);
-            }
+            using var mem = MemoryPool<T>.Shared.Rent(Width * Height);
+            var span = mem.Memory.Span.Slice(0, Width * Height);
+            var view = other.GetView();
+            for (var i = 0; i < _data.Length; i++)
+                span[i] = DangerousSubtract(_data[i], view[i]);
+            return new Image<T>(span, Height, Width);
         }
 
         public ISubImage<T> Slice(ICollection<(int I, int J)> indexes) 

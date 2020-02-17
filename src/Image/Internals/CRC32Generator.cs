@@ -8,7 +8,7 @@ namespace ImageCore.Internals
     internal sealed class CRC32Generator : IHashGenerator
     {
         private static IHashGenerator Instance { get; }
-        private uint[] _table;
+        private readonly uint[] _table;
 
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -19,6 +19,7 @@ namespace ImageCore.Internals
 
         private CRC32Generator()
         {
+            _table = new uint[256];
             FillTable();
         }
 
@@ -26,8 +27,6 @@ namespace ImageCore.Internals
         private void FillTable()
         {
             const uint key = 0x04C11DB7;
-
-            _table = new uint[256];
 
             for (var i = 0; i < _table.Length; i++)
             {
