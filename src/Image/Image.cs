@@ -176,7 +176,7 @@ namespace ImageCore
         }
 
         public ref readonly T DangerousGet(long pos)
-            => ref Unsafe.Add(ref _data[0], new IntPtr(pos));
+            => ref Unsafe.Add(ref _data.AsSpan().GetPinnableReference(), new IntPtr(pos));
 
         [MethodImpl(MethodImplOptions.Synchronized)]
         public T Max()
