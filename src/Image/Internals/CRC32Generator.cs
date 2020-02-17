@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 
 namespace ImageCore.Internals
 {
+    // ReSharper disable once InconsistentNaming
     internal sealed class CRC32Generator : IHashGenerator
     {
         private static IHashGenerator Instance { get; }

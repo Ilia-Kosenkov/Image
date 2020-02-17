@@ -8,6 +8,8 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 #if ALLOW_UNSAFE_IL_MATH
+using static Internal.UnsafeNumerics.MathOps;
+#else
 using static Internal.Numerics.MathOps;
 #endif
 
@@ -16,7 +18,7 @@ namespace ImageCore
     public abstract class Image
     {
         public delegate void Initializer<T>(Span<T> span)
-            where T : unmanaged, IComparable<T>;
+            where T : unmanaged, IComparable<T>, IEquatable<T>;
 
         public static IImmutableList<Type> AllowedTypes { get; } =
             new[] 
@@ -39,7 +41,7 @@ namespace ImageCore
         }
 
         public static IImage<T> Create<T>(Initializer<T> init, int height, int width)
-            where T : unmanaged, IComparable<T>
+            where T : unmanaged, IComparable<T>, IEquatable<T>
         {
             if (init is null)
                 throw new ArgumentNullException(nameof(init));
@@ -52,7 +54,7 @@ namespace ImageCore
 
     [Serializable]
     public sealed class Image<T> : Image, IImage<T> 
-        where T : unmanaged, IComparable<T>
+        where T : unmanaged, IComparable<T>, IEquatable<T>
     {
  
         private readonly T[] _data;
@@ -137,7 +139,7 @@ namespace ImageCore
             Height = height;
         }
 
-        public Image(SerializationInfo info, StreamingContext context)
+        private Image(SerializationInfo info, StreamingContext context)
         {
             ThrowIfTypeMismatch<T>();
 
@@ -173,6 +175,12 @@ namespace ImageCore
             Height = height;
         }
 
+        public ref readonly T DangerousGet(long pos)
+            => ref Unsafe.Add(ref _data[0], new IntPtr(pos));
+
+        ref readonly byte IViewable.DangerousGet(long pos)
+            => ref Unsafe.Add(ref Unsafe.As<T, byte>(ref _data[0]), new IntPtr(pos));
+
         [MethodImpl(MethodImplOptions.Synchronized)]
         public T Max()
         {
@@ -180,11 +188,7 @@ namespace ImageCore
             {
                 var temp = _data[0];
                 foreach (var item in _data)
-#if ALLOW_UNSAFE_IL_MATH
                     if (DangerousGreaterEquals(item, temp))
-#else
-                    if (item.CompareTo(temp) >= 0)
-#endif
                         temp = item;
 
                 _max = temp;
@@ -201,11 +205,7 @@ namespace ImageCore
             {
                 var temp = _data[0];
                 foreach (var item in _data)
-#if ALLOW_UNSAFE_IL_MATH
                     if (DangerousLessEquals(item, temp))
-#else
-                    if (item.CompareTo(temp) <= 0)
-#endif
 
                         temp = item;
 
@@ -217,7 +217,6 @@ namespace ImageCore
 
         public T Percentile(T lvl)
         {
-#if ALLOW_UNSAFE_IL_MATH
             var hund = DangerousCast<int, T>(100);
             var zero = DangerousCast<int, T>(0);
             if (DangerousLessThan(lvl, zero)
@@ -240,22 +239,6 @@ namespace ImageCore
                 len = 1;
 
             return _data.OrderBy(x => x, Comparer<T>.Default).Skip(len - 1).First();
-            
-#else
-            dynamic l = lvl;
-            if (Math.Abs(l) < double.Epsilon)
-                return Min();
-            if (Math.Abs(l - 1) < double.Epsilon)
-                return Max();
-            var query = _data.OrderBy(x => x, Comparer<T>.Default);
-
-            var len = (int)Math.Ceiling(l * Width * Height / 100.0);
-
-            if (len < 1)
-                len = 1;
-
-            return query.Skip(len - 1).Take(1).First();
-#endif
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -263,11 +246,7 @@ namespace ImageCore
         {
             if (_median is null)
             {
-#if ALLOW_UNSAFE_IL_MATH
                 _median = Percentile(DangerousCast<int, T>(50));
-#else
-            _median = Percentile((T)Convert.ChangeType(50, typeof(T)));
-#endif
             }
 
             return _median.Value;
@@ -275,20 +254,12 @@ namespace ImageCore
 
         public T Average()
         {
-#if ALLOW_UNSAFE_IL_MATH
             return DangerousCast<double, T>((this as ISubImage).Average());
-#else
-            return (T) Convert.ChangeType((this as IImage).Average(), typeof(T));
-#endif
         }
 
         public T Var()
         {
-#if ALLOW_UNSAFE_IL_MATH
             return DangerousCast<double, T>((this as ISubImage).Var());
-#else
-            return (T) Convert.ChangeType((this as IImage).Var(), typeof(T));
-#endif
         }
 
 
@@ -317,22 +288,19 @@ namespace ImageCore
         }
 
         public IImage<TOther> CastTo<TOther>() where TOther 
-            : unmanaged, IComparable<TOther>
+            : unmanaged, IComparable<TOther>, IEquatable<TOther>
         {
             using (var pool = MemoryPool<TOther>.Shared.Rent(Width * Height))
             {
                 var span = pool.Memory.Span.Slice(0, Width * Height);
                 for (var i = 0; i < _data.Length; i++)
-#if ALLOW_UNSAFE_IL_MATH
                     span[i] = DangerousCast<T, TOther>(_data[i]);
-#else
-                    span[i] = (TOther) Convert.ChangeType(_data[i], typeof(TOther));
-#endif
                 return new Image<TOther>(span, Height, Width);
             }
         }
 
-        public IImage<TOther> CastTo<TOther>(Func<T, TOther> caster) where TOther : unmanaged, IComparable<TOther>
+        public IImage<TOther> CastTo<TOther>(Func<T, TOther> caster) 
+            where TOther : unmanaged, IComparable<TOther>, IEquatable<TOther>
         {
             using (var pool = MemoryPool<TOther>.Shared.Rent(Width * Height))
             {
@@ -352,47 +320,16 @@ namespace ImageCore
                 _data.AsSpan().CopyTo(span);
 
                 foreach (ref var item in span)
-#if ALLOW_UNSAFE_IL_MATH
                     if (DangerousLessThan(item, low))
                         item = low;
                     else if(DangerousGreaterThan(item ,high))
                         item = high;
-#else
-                    if (item.CompareTo(low) < 0)
-                        item = low;
-                    else if (item.CompareTo(high) > 0)
-                        item = high;
-#endif
                 return new Image<T>(span, Height, Width);
             }
         }
 
         public IImage<T> Scale(T low, T high)
         {
-#if !ALLOW_UNSAFE_IL_MATH
-            dynamic dLow = low;
-            dynamic dHigh = high;
-            dynamic min = Min();
-            dynamic max = Max();
-            var enumer = dHigh - dLow;
-            var denomer = max - min;
-
-            using (var mem = MemoryPool<T>.Shared.Rent(Width * Height))
-            {
-                var span = mem.Memory.Span.Slice(0, Width * Height);
-
-                if (denomer == 0)
-                {
-                    var filler = (T) ((dLow + dHigh) / 2);
-                    span.Fill(filler);
-                }
-                else
-                    for (var i = 0; i < _data.Length; i++)
-                        span[i] = (T) (dLow + (_data[i] - min) * enumer / denomer);
-                return new Image<T>(span, Height, Width);
-            }
-#else
-
             var min = Min();
             var max = Max();
             var enumer = DangerousSubtract(high, low);
@@ -423,65 +360,44 @@ namespace ImageCore
 
                 return new Image<T>(span, Height, Width);
             }
-#endif
         }
 
         public IImage<T> AddScalar(T item)
         {
-#if !ALLOW_UNSAFE_IL_MATH
-            dynamic temp = item;
-#endif
+
 
             using (var mem = MemoryPool<T>.Shared.Rent(Width * Height))
             {
                 var span = mem.Memory.Span.Slice(0, Width * Height);
 
                 for (var i = 0; i < _data.Length; i++)
-#if ALLOW_UNSAFE_IL_MATH
                     span[i] = DangerousAdd(_data[i], item);
-#else
-                    span[i] = _data[i] + temp;           
-#endif
                 return new Image<T>(span, Height, Width);
             }
         }
 
         public IImage<T> MultiplyBy(T item)
         {
-#if !ALLOW_UNSAFE_IL_MATH
-            dynamic temp = item;
-#endif
 
             using (var mem = MemoryPool<T>.Shared.Rent(Width * Height))
             {
                 var span = mem.Memory.Span.Slice(0, Width * Height);
 
                 for (var i = 0; i < _data.Length; i++)
-#if ALLOW_UNSAFE_IL_MATH
                     span[i] = DangerousMultiply(_data[i], item);
-#else
-                    span[i] = _data[i] * temp;           
-#endif
                 return new Image<T>(span, Height, Width);
             }
         }
 
         public IImage<T> DivideBy(T item)
         {
-#if !ALLOW_UNSAFE_IL_MATH
-            dynamic temp = item;
-#endif
 
             using (var mem = MemoryPool<T>.Shared.Rent(Width * Height))
             {
                 var span = mem.Memory.Span.Slice(0, Width * Height);
 
                 for (var i = 0; i < _data.Length; i++)
-#if ALLOW_UNSAFE_IL_MATH
                     span[i] = DangerousDivide(_data[i], item);
-#else
-                    span[i] = _data[i] / temp;           
-#endif
                 return new Image<T>(span, Height, Width);
             }
         }
@@ -496,14 +412,7 @@ namespace ImageCore
                 var span = mem.Memory.Span.Slice(0, Width * Height);
                 var view = other.GetView();
                 for (var i = 0; i < _data.Length; i++)
-#if ALLOW_UNSAFE_IL_MATH
                     span[i] = DangerousAdd(_data[i], view[i]);
-#else
-                {
-                    dynamic val = view[i];
-                    span[i] = _data[i] + val;
-                }           
-#endif
                 return new Image<T>(span, Height, Width);
             }
         }
@@ -518,14 +427,7 @@ namespace ImageCore
                 var span = mem.Memory.Span.Slice(0, Width * Height);
                 var view = other.GetView();
                 for (var i = 0; i < _data.Length; i++)
-#if ALLOW_UNSAFE_IL_MATH
                     span[i] = DangerousSubtract(_data[i], view[i]);
-#else
-                {
-                    dynamic val = view[i];
-                    span[i] = _data[i] - val;
-                }           
-#endif
                 return new Image<T>(span, Height, Width);
             }
         }
@@ -568,15 +470,11 @@ namespace ImageCore
 
             // WATCH: Possible optimization
             var view = other.GetView();
-            for(var i = 0; i < Width * Height; i++)
-#if ALLOW_UNSAFE_IL_MATH
-                if (DangerousNotEquals(_data[i], view[i]))
-                    return false;
-#else
-                if(_data[i].CompareTo(view[i]) != 0)
-                    return false;
-#endif
-            return true;
+            //for(var i = 0; i < Width * Height; i++)
+            //    if (DangerousNotEquals(_data[i], view[i]))
+            //        return false;
+            //return true;
+            return GetView().SequenceEqual(view);
         }
 
         public bool Equals(IImage other)
@@ -612,97 +510,63 @@ namespace ImageCore
 
         ISubImage IImage.Slice(Func<double, bool> selector)
         {
-#if !ALLOW_UNSAFE_IL_MATH
-            throw new NotImplementedException();
-#else
             bool Func(T x) => selector(DangerousCast<T, double>(x));
             return Slice(Func);
-#endif
         }
 
         ISubImage IImage.Slice(Func<int, int, double, bool> selector)
         {
-#if !ALLOW_UNSAFE_IL_MATH
-            throw new NotImplementedException();
-#else
             bool Func(int i, int j, T x) => selector(i, j, DangerousCast<T, double>(x));
             return Slice(Func);
-#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         double ISubImage.Min()
         {
-#if ALLOW_UNSAFE_IL_MATH
             return DangerousCast<T, double>(Min());
-#else
-            return (double) Convert.ChangeType(Min(), typeof(double));
-#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         double ISubImage.Max()
         {
-#if ALLOW_UNSAFE_IL_MATH
             return DangerousCast<T, double>(Max());
-#else
-            return (double) Convert.ChangeType(Max(), typeof(double));
-#endif
         }
 
         IImage IImage.Clamp(double low, double high)
         {
-#if ALLOW_UNSAFE_IL_MATH
             return Clamp(DangerousCast<double, T>(low), DangerousCast<double, T>(high));
-#else
-            return Clamp((T) Convert.ChangeType(low, typeof(T)), (T) Convert.ChangeType(high, typeof(T)));
-#endif
         }
 
         double ISubImage.Percentile(double lvl)
         {
-#if ALLOW_UNSAFE_IL_MATH
             return DangerousCast<T, double>(Percentile(DangerousCast<double, T>(lvl)));
-#else
-            return (double) Convert.ChangeType(Percentile((T) Convert.ChangeType(lvl, typeof(T))), typeof(double));
-#endif
         }
 
         double ISubImage.Median()
         {
-#if ALLOW_UNSAFE_IL_MATH
             return DangerousCast<T, double>(Median());
-#else
-            return (double)Convert.ChangeType(Median(), typeof(double));
-#endif
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
         double ISubImage.Var()
         {
-            if(_var is null)
-            {
-                if (Size > 1)
-                {
-                    var avg = Average();
-                    var sum = 0.0;
-#if ALLOW_UNSAFE_IL_MATH
-                    foreach(var item in _data)
-                    { 
-                        var diff = DangerousCast<T, double>(DangerousSubtract(item, avg));
-#else
-                    foreach (dynamic item in _data)
-                    {
-                        var diff = item - avg;
-#endif
-                        sum += diff * diff;
-                    }
+            if (!(_var is null)) return _var.Value;
 
-                    _var = sum / (Size - 1);
+            if (Size > 1)
+            {
+                var avg = Average();
+                var sum = 0.0;
+                foreach(var item in _data)
+                { 
+                    var diff = DangerousCast<T, double>(DangerousSubtract(item, avg));
+
+                    sum += diff * diff;
                 }
-                else
-                    _var = 0.0;
+
+                _var = sum / (Size - 1);
             }
+            else
+                _var = 0.0;
 
             return _var.Value;
         }
@@ -713,13 +577,9 @@ namespace ImageCore
             if(_average is null)
             {
                 var sum = 0.0;
-#if ALLOW_UNSAFE_IL_MATH
                 foreach (var item in _data)
                     sum += DangerousCast<T, double>(item);
-#else
-                foreach (dynamic item in _data)
-                    sum += item;
-#endif
+
                 _average = sum / Size;
             }
             return _average.Value;
@@ -735,7 +595,6 @@ namespace ImageCore
                && Equals(other);
 
         public override int GetHashCode()
-            //=> _data.GetHashCode() ^ ((Width << 16 ) ^ Height);
             => (int) unchecked((Internals.CRC32Generator.ComputeHash<T>(_data) * 31 + (uint) Width) * 31 + (uint) Height);
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -753,8 +612,6 @@ namespace ImageCore
 
         public static IImage<T> Zero(int height, int width)
             => new Image<T>(height, width);
-
-        
 
     }
 }

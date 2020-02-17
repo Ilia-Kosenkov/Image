@@ -4,17 +4,17 @@ using System.Collections.Generic;
 namespace ImageCore
 {
     public interface IImage<T> : IEquatable<IImage<T>>, ISubImage<T>, IViewable<T>, IEnumerable<T>, IImage
-        where T : unmanaged, IComparable<T>
+        where T : unmanaged, IComparable<T>, IEquatable<T>
     {
         T this[int i, int j] { get; }
         IImage<T> Copy();
         IImage<T> Transpose();
 
         IImage<TOther> CastTo<TOther>() 
-            where TOther : unmanaged, IComparable<TOther>;
+            where TOther : unmanaged, IComparable<TOther>, IEquatable<TOther>;
 
         IImage<TOther> CastTo<TOther>(Func<T, TOther> caster) 
-            where TOther : unmanaged, IComparable<TOther>;
+            where TOther : unmanaged, IComparable<TOther>, IEquatable<TOther>;
 
         IImage<T> Clamp(T low, T high);
         IImage<T> Scale(T low, T high);
