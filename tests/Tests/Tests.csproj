@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.0</TargetFramework>
+    <AssemblyVersion>1.0.11.0</AssemblyVersion>
+    <FileVersion>1.0.11.0</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -23,6 +25,9 @@
   <ItemGroup>
     <Reference Include="Internal.Numerics">
       <HintPath>..\..\..\Internal\src\Numerics\bin\Debug\netstandard2.0\Internal.Numerics.dll</HintPath>
+    </Reference>
+    <Reference Include="Internal.UnsafeNumerics">
+      <HintPath>..\..\..\Internal\src\UnsafeNumerics\bin\Debug\netstandard2.0\Internal.UnsafeNumerics.dll</HintPath>
     </Reference>
   </ItemGroup>
 

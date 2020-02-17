@@ -4,7 +4,7 @@ using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
 using ImageCore;
 using NUnit.Framework;
-using Internal.Numerics;
+using Internal.UnsafeNumerics;
 using MathNet.Numerics;
 
 namespace Tests
@@ -299,6 +299,18 @@ namespace Tests
         }
 
         [Test]
+        public void TestCastTo()
+        {
+            var img = Image.Create<double>(x =>
+            {
+                for (var i = 0; i < 4_000; i++)
+                    x[i] = _r.Next(-1_000, 1_000) + _r.NextDouble();
+            }, 100, 40);
+
+            Assert.That(() => img.CastTo<int>(), Throws.Nothing);
+        }
+
+        [Test]
         public void TestThrows()
         {
             Assert.That(() => Image.Create<double>(null, 1, 1), Throws.ArgumentNullException);
@@ -318,6 +330,19 @@ namespace Tests
             Assert.That(() => new Image<int>(ReadOnlySpan<byte>.Empty, 1, -1), Throws.InstanceOf<ArgumentOutOfRangeException>());
             Assert.That(() => new Image<int>(ReadOnlySpan<byte>.Empty, 1, 1), Throws.ArgumentException);
 
+        }
+
+        [Test]
+        public void TestDangerousAccess()
+        {
+            var arr = new int[40_000];
+            for (var i = 0; i < arr.Length; i++)
+                arr[i] = _r.Next(-100_000, 100_000);
+
+            var img = new Image<int>(arr, 400, 100);
+
+            for (var i = 0; i < arr.Length; i++) 
+                Assert.AreEqual(img[i], img.DangerousGet(i));
         }
     }
  
