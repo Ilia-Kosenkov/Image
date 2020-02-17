@@ -1,9 +1,10 @@
 ﻿using System;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Jobs;
 
 namespace CopyBenchmarks
 {
-    [CoreJob()]
+    [SimpleJob(RuntimeMoniker.NetCoreApp31)]
     public class AccessBench
     {
         public Random R;

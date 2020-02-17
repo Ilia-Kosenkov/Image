@@ -2,11 +2,13 @@
 using System.Linq;
 using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Jobs;
 using Internal.Numerics;
 
 namespace CopyBenchmarks
-{ 
-    [CoreJob()]
+{
+
+    [SimpleJob(RuntimeMoniker.NetCoreApp30)]
     public class Intrinsics<T> where T : unmanaged, IComparable<T>
     {
         private T[] _array_1;

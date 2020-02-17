@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Jobs;
 
 namespace CopyBenchmarks
 {
-    
-    [CoreJob()]
+    [SimpleJob(RuntimeMoniker.NetCoreApp30)]
     public class CopyBench<T> where T : unmanaged
     {
         public static int SizeOfT { get; } = Unsafe.SizeOf<T>();

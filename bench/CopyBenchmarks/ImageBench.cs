@@ -1,15 +1,16 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Attributes;
-using Image;
+using BenchmarkDotNet.Jobs;
+using ImageCore;
 
 namespace CopyBenchmarks
 {
-    [CoreJob()]
+    [SimpleJob(RuntimeMoniker.NetCoreApp30)]
     public class ImageBench
     {
         private Random _r;
-        private IImmutableImage<int> _image;
+        private IImage<int> _image;
 
         [Params(256, 512, 1024, 2048)]
         public int Width;
@@ -23,7 +24,7 @@ namespace CopyBenchmarks
         }
 
         [IterationSetup]
-        public void IterSteup()
+        public void IterSetup()
         {
             var data = new int[Width * Height];
 
