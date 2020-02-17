@@ -6,7 +6,5 @@ namespace ImageCore
     {
         ReadOnlySpan<byte> GetByteView();
         bool BitwiseEquals(IImage other);
-
-        ref readonly byte DangerousGet(long pos);
     }
 }

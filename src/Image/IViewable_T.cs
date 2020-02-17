@@ -2,10 +2,9 @@
 
 namespace ImageCore
 {
-    public interface IViewable<T> where T : unmanaged, IComparable<T>
+    public interface IViewable<T> : IViewable
+        where T : unmanaged, IComparable<T>
     {
         ReadOnlySpan<T> GetView();
-
-        ref readonly T DangerousGet(long pos);
     }
 }

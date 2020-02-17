@@ -178,9 +178,6 @@ namespace ImageCore
         public ref readonly T DangerousGet(long pos)
             => ref Unsafe.Add(ref _data[0], new IntPtr(pos));
 
-        ref readonly byte IViewable.DangerousGet(long pos)
-            => ref Unsafe.Add(ref Unsafe.As<T, byte>(ref _data[0]), new IntPtr(pos));
-
         [MethodImpl(MethodImplOptions.Synchronized)]
         public T Max()
         {

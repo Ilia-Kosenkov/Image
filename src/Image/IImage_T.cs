@@ -7,6 +7,9 @@ namespace ImageCore
         where T : unmanaged, IComparable<T>, IEquatable<T>
     {
         T this[int i, int j] { get; }
+
+        ref readonly T DangerousGet(long pos);
+
         IImage<T> Copy();
         IImage<T> Transpose();
 
