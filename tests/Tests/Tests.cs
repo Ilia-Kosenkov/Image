@@ -5,7 +5,6 @@ using System.Runtime.Serialization.Formatters.Binary;
 using ImageCore;
 using NUnit.Framework;
 using Internal.UnsafeNumerics;
-using MathNet.Numerics;
 
 namespace Tests
 {
