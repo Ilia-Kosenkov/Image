@@ -19,6 +19,6 @@ namespace ImageCore
         ISubImage Slice(Func<double, bool> selector);
         ISubImage Slice(Func<int, int, double, bool> selector);
 
-
+        ISubImage Slice(Range horizontal, Range vertical);
     }
 }

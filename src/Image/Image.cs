@@ -40,14 +40,28 @@ namespace ImageCore
                 throw new NotSupportedException(typeof(T).ToString());
         }
 
-        public static IImage<T> Create<T>(Initializer<T> init, int height, int width)
+        public static IImage<T> Create<T>(Initializer<T> init, int width, int height)
             where T : unmanaged, IComparable<T>, IEquatable<T>
         {
-            if (init is null)
-                throw new ArgumentNullException(nameof(init));
-            var img = new Image<T>(height, width);
-            init(img.RawView);
-            return img;
+            return new Image<T>(width, height, init);
+        }
+
+        public static IImage<T> CreateRaw<T>(Initializer<byte> init, int width, int height)
+            where T : unmanaged, IComparable<T>, IEquatable<T>
+        {
+            return new Image<T>(width, height, init);
+        }
+
+        public static IImage<T> Create<T>(ReadOnlySpan<T> data, int width, int height)
+            where T : unmanaged, IComparable<T>, IEquatable<T>
+        {
+            return new Image<T>(data, width, height);
+        }
+
+        public static IImage<T> Create<T>(ReadOnlySpan<byte> data, int width, int height)
+            where T : unmanaged, IComparable<T>, IEquatable<T>
+        {
+            return new Image<T>(data, width, height);
         }
 
     }
@@ -72,17 +86,20 @@ namespace ImageCore
         public int Width { get; }
 
         public T this[int i, int j] =>
-            i < 0 || i >= Height
+            i < 0 || i >= Width
                 ? throw new ArgumentOutOfRangeException(nameof(i))
-                : j < 0 || j >= Width
+                : j < 0 || j >= Height
                     ? throw new ArgumentOutOfRangeException(nameof(j))
-                    : _data[i * Width + j];
+                    : _data[i * Height + j];
+
+        public T this[Index i, Index j] =>
+            this[i.GetOffset(Width), j.GetOffset(Height)];
 
         public T this[long i] => i < 0 || i >= Size
             ? throw new ArgumentOutOfRangeException(nameof(i))
             : _data[i];
 
-        internal Image(int height, int width)
+        internal Image(int width, int height)
         {
             ThrowIfTypeMismatch<T>();
 
@@ -96,7 +113,47 @@ namespace ImageCore
             Height = height;
         }
 
-        public Image(ReadOnlySpan<T> data, int height, int width)
+        internal Image(int width, int height, Initializer<T> filler)
+        {
+            ThrowIfTypeMismatch<T>();
+
+            if (filler is null)
+                throw new ArgumentNullException(nameof(filler));
+            
+            if (width < 1)
+                throw new ArgumentOutOfRangeException(nameof(width));
+            if (height < 1)
+                throw new ArgumentOutOfRangeException(nameof(height));
+
+          
+            _data = new T[width * height];
+            Width = width;
+            Height = height;
+
+            filler(_data);
+        }
+
+        internal Image(int width, int height, Initializer<byte> filler)
+        {
+            ThrowIfTypeMismatch<T>();
+
+            if (filler is null)
+                throw new ArgumentNullException(nameof(filler));
+
+            if (width < 1)
+                throw new ArgumentOutOfRangeException(nameof(width));
+            if (height < 1)
+                throw new ArgumentOutOfRangeException(nameof(height));
+
+
+            _data = new T[width * height];
+            Width = width;
+            Height = height;
+
+            filler(Unsafe.As<T[], byte[]>(ref _data));
+        }
+
+        internal Image(ReadOnlySpan<T> data, int width, int height)
         {
            ThrowIfTypeMismatch<T>();
 
@@ -106,8 +163,9 @@ namespace ImageCore
                 throw new ArgumentOutOfRangeException(nameof(height));
 
             // Size mismatch
-            if (data.Length < width * height)
-                throw new ArgumentException();
+            if (data.Length > width * height)
+                throw new ArgumentException(nameof(data));
+
 
             _data = new T[width * height];
             data.CopyTo(_data);
@@ -115,7 +173,7 @@ namespace ImageCore
             Height = height;
         }
 
-        public Image(ReadOnlySpan<byte> byteData, int height, int width)
+        internal Image(ReadOnlySpan<byte> byteData, int width, int height)
         {
             ThrowIfTypeMismatch<T>();
 
@@ -127,8 +185,8 @@ namespace ImageCore
             var size = Unsafe.SizeOf<T>();
 
             // Size mismatch
-            if (size * byteData.Length < width * height)
-                throw new ArgumentException();
+            if (byteData.Length > width * height * size * size)
+                throw new ArgumentException(nameof(byteData));
 
             _data = new T[width * height];
 
@@ -176,7 +234,7 @@ namespace ImageCore
         }
 
         public ref readonly T DangerousGet(long pos)
-            => ref Unsafe.Add(ref _data.AsSpan().GetPinnableReference(), new IntPtr(pos));
+            => ref Unsafe.Add(ref MemoryMarshal.GetReference<T>(_data), new IntPtr(pos));
 
         [MethodImpl(MethodImplOptions.Synchronized)]
         public T Max()
@@ -268,18 +326,16 @@ namespace ImageCore
         public ReadOnlySpan<T> GetView() => _data;
 
         public IImage<T> Copy()
-            => new Image<T>(_data, Height, Width);
+            => new Image<T>(_data, Width, Height);
 
         public IImage<T> Transpose()
         {
-            using var mem = MemoryPool<T>.Shared.Rent(Width * Height);
-            var span = mem.Memory.Span.Slice(0, Width * Height);
-                
-            for(var i = 0; i < Height; i++)
-            for (var j = 0; j < Width; j++)
-                span[j * Height + i] = _data[i * Width + j];
-
-            return  new Image<T>(span, Width, Height);
+            return new Image<T>(Height, Width, span =>
+            {
+                for (var i = 0; i < Width; i++)
+                for (var j = 0; j < Height; j++)
+                    span[j * Width + i] = _data[i * Height + j];
+            });
         }
 
         public IImage<TOther> CastTo<TOther>() where TOther 
@@ -289,7 +345,7 @@ namespace ImageCore
             var span = pool.Memory.Span.Slice(0, Width * Height);
             for (var i = 0; i < _data.Length; i++)
                 span[i] = DangerousCast<T, TOther>(_data[i]);
-            return new Image<TOther>(span, Height, Width);
+            return new Image<TOther>(span, Width, Height);
         }
 
         public IImage<TOther> CastTo<TOther>(Func<T, TOther> caster) 
@@ -300,7 +356,7 @@ namespace ImageCore
             for (var i = 0; i < _data.Length; i++)
                 span[i] = caster(_data[i]);
 
-            return new Image<TOther>(span, Height, Width);
+            return new Image<TOther>(span, Width, Height);
         }
 
         public IImage<T> Clamp(T low, T high)
@@ -314,7 +370,7 @@ namespace ImageCore
                     item = low;
                 else if(DangerousGreaterThan(item ,high))
                     item = high;
-            return new Image<T>(span, Height, Width);
+            return new Image<T>(span, Width, Height);
         }
 
         public IImage<T> Scale(T low, T high)
@@ -346,7 +402,7 @@ namespace ImageCore
                                 denomer), 
                             low);
 
-            return new Image<T>(span, Height, Width);
+            return new Image<T>(span, Width, Height);
         }
 
         public IImage<T> AddScalar(T item)
@@ -356,7 +412,7 @@ namespace ImageCore
 
             for (var i = 0; i < _data.Length; i++)
                 span[i] = DangerousAdd(_data[i], item);
-            return new Image<T>(span, Height, Width);
+            return new Image<T>(span, Width, Height);
         }
 
         public IImage<T> MultiplyBy(T item)
@@ -366,7 +422,7 @@ namespace ImageCore
 
             for (var i = 0; i < _data.Length; i++)
                 span[i] = DangerousMultiply(_data[i], item);
-            return new Image<T>(span, Height, Width);
+            return new Image<T>(span, Width, Height);
         }
 
         public IImage<T> DivideBy(T item)
@@ -376,7 +432,7 @@ namespace ImageCore
 
             for (var i = 0; i < _data.Length; i++)
                 span[i] = DangerousDivide(_data[i], item);
-            return new Image<T>(span, Height, Width);
+            return new Image<T>(span, Width, Height);
         }
 
         public IImage<T> Add(IImage<T> other)
@@ -389,7 +445,7 @@ namespace ImageCore
             var view = other.GetView();
             for (var i = 0; i < _data.Length; i++)
                 span[i] = DangerousAdd(_data[i], view[i]);
-            return new Image<T>(span, Height, Width);
+            return new Image<T>(span, Width, Height);
         }
 
         public IImage<T> Subtract(IImage<T> other)
@@ -402,7 +458,7 @@ namespace ImageCore
             var view = other.GetView();
             for (var i = 0; i < _data.Length; i++)
                 span[i] = DangerousSubtract(_data[i], view[i]);
-            return new Image<T>(span, Height, Width);
+            return new Image<T>(span, Width, Height);
         }
 
         public ISubImage<T> Slice(ICollection<(int I, int J)> indexes) 
@@ -410,9 +466,9 @@ namespace ImageCore
 
         public ISubImage<T> Slice(Func<T, bool> selector)
         {
-            var indexes = new List<(int I, int J)>();
-            for(var i = 0; i < Height; i++)
-                for(var j = 0; j < Width; j++)
+            var indexes = new List<(int I, int J)>(Width * Height / 32);
+            for(var i = 0; i < Width; i++)
+                for(var j = 0; j < Height; j++)
                     if(selector(this[i, j]))
                         indexes.Add((i, j));
 
@@ -424,9 +480,9 @@ namespace ImageCore
 
         public ISubImage<T> Slice(Func<int, int, T, bool> selector)
         {
-            var indexes = new List<(int I, int J)>();
-            for (var i = 0; i < Height; i++)
-                for (var j = 0; j < Width; j++)
+            var indexes = new List<(int I, int J)>(Width * Height / 32);
+            for (var i = 0; i < Width; i++)
+                for (var j = 0; j < Height; j++)
                     if (selector(i, j, this[i, j]))
                         indexes.Add((i, j));
 
@@ -441,13 +497,16 @@ namespace ImageCore
             if (other is null || Width != other.Width || Height != other.Height)
                 return false;
 
-            // WATCH: Possible optimization
-            var view = other.GetView();
-            //for(var i = 0; i < Width * Height; i++)
-            //    if (DangerousNotEquals(_data[i], view[i]))
-            //        return false;
-            //return true;
-            return GetView().SequenceEqual(view);
+            var that = other.GetView();
+            var @this = GetView();
+            
+            if (typeof(T) != typeof(float) && typeof(T) != typeof(double)) 
+                return @this.SequenceEqual(that);
+
+            for (var i = 0; i < Width * Height; i++)
+                if (DangerousNotEquals(@this[i], that[i]))
+                    return false;
+            return true;
         }
 
         public bool Equals(IImage other)
@@ -491,6 +550,19 @@ namespace ImageCore
         {
             bool Func(int i, int j, T x) => selector(i, j, DangerousCast<T, double>(x));
             return Slice(Func);
+        }
+
+        public ISubImage Slice(Range horizontal, Range vertical)
+        {
+            var x = horizontal.GetOffsetAndLength(Width);
+            var y = horizontal.GetOffsetAndLength(Height);
+
+            var result = new List<(int I, int J)>(x.Length * y.Length);
+            for(var i = x.Offset; i < x.Length; i++)
+            for (var j = y.Offset; j < y.Length; j++)
+                result.Add((i, j));
+
+            return Slice(result);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -583,8 +655,8 @@ namespace ImageCore
             info.AddValue("ByteData", GetByteView().ToArray());
         }
 
-        public static IImage<T> Zero(int height, int width)
-            => new Image<T>(height, width);
+        public static IImage<T> Zero(int width, int height)
+            => new Image<T>(width, height);
 
     }
 }

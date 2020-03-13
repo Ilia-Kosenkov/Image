@@ -7,6 +7,7 @@ namespace ImageCore
         where T : unmanaged, IComparable<T>, IEquatable<T>
     {
         T this[int i, int j] { get; }
+        T this[Index i, Index j] { get; }
 
         ref readonly T DangerousGet(long pos);
 
