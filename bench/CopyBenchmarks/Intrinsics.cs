@@ -3,7 +3,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
-using Internal.Numerics;
+using Internal.UnsafeNumerics;
 
 namespace CopyBenchmarks
 {

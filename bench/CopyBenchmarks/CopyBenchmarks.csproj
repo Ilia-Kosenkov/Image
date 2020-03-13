@@ -35,16 +35,11 @@
     <PackageReference Include="System.Collections.Immutable" Version="1.7.0" />
     <PackageReference Include="System.Memory" Version="4.5.3" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.7.0" />
+    <PackageReference Include="UnsafeNumerics" Version="0.2.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Image\Image.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="Internal.Numerics">
-      <HintPath>..\..\..\Internal\src\Numerics\bin\Debug\netstandard2.0\Internal.Numerics.dll</HintPath>
-    </Reference>
   </ItemGroup>
 
 </Project>

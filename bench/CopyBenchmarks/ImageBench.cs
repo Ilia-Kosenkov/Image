@@ -6,7 +6,7 @@ using ImageCore;
 
 namespace CopyBenchmarks
 {
-    [SimpleJob(RuntimeMoniker.NetCoreApp30)]
+    [SimpleJob(RuntimeMoniker.NetCoreApp31)]
     public class ImageBench
     {
         private Random _r;
@@ -31,7 +31,7 @@ namespace CopyBenchmarks
             for (var i = 0; i < data.Length; i++)
                 data[i] = _r.Next(-(1 << 24), 1 << 24);
 
-            _image = new Image<int>(data, Height, Width);
+            _image = Image.Create<int>(data, Width, Height);
         }
 
 

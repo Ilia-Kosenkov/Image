@@ -23,8 +23,8 @@ namespace Tests
             var bytes = new byte[x.Length * sizeof(double)];
             Buffer.BlockCopy(x, 0, bytes, 0, bytes.Length);
 
-            var imageFromBytes = new Image<double>(bytes, 1, x.Length);
-            var imageFromDoubles = new Image<double>(x, 1, x.Length);
+            var imageFromBytes = Image.Create<double>(bytes, 1, x.Length);
+            var imageFromDoubles = Image.Create<double>(x, 1, x.Length);
 
             Assert.IsTrue(imageFromBytes.Equals(imageFromDoubles));
         }
@@ -38,7 +38,7 @@ namespace Tests
                 arr[i] = _r.Next();
 
 
-            var img = new Image<int>(arr, 80, 50);
+            var img = Image.Create<int>(arr, 80, 50);
 
             Assert.AreEqual(arr.Min(), img.Min());
             Assert.AreEqual(arr.Max(), img.Max());
@@ -55,7 +55,7 @@ namespace Tests
                 arr[i] = _r.Next();
 
 
-            var img = new Image<int>(arr, 200, 200);
+            var img = Image.Create<int>(arr, 200, 200);
 
             var min = img.Min();
             var max = img.Max();
@@ -78,7 +78,7 @@ namespace Tests
                 arr[i] = _r.Next(-100_000, 100_000);
 
 
-            var img = new Image<double>(arr, 200, 200);
+            var img = Image.Create<double>(arr, 200, 200);
 
             var newIm = img.Scale(0, 1_000);
 
@@ -96,7 +96,7 @@ namespace Tests
                 arr[i] = _r.Next(-100_000, 100_000);
 
 
-            var img = new Image<double>(arr, 200, 200);
+            var img = Image.Create<double>(arr, 400, 100);
 
             var newIm = img.Transpose();
 
@@ -113,7 +113,7 @@ namespace Tests
                 arr[i] = _r.Next(-100_000, 100_000);
 
 
-            var img = new Image<double>(arr, 200, 200);
+            var img = Image.Create<double>(arr, 200, 200);
             
             Assume.That(img.Equals(Image<double>.Zero(img.Height, img.Width)), Is.False);
 
@@ -169,16 +169,16 @@ namespace Tests
                 arr[i] = _r.Next(-100_000, 100_000);
 
 
-            var img = new Image<double>(arr, 100, 400);
+            var img = Image.Create<double>(arr, 100, 400);
 
-            Assert.AreEqual(100, img.Height);
-            Assert.AreEqual(400, img.Width);
+            Assert.AreEqual(100, img.Width);
+            Assert.AreEqual(400, img.Height);
             Assert.AreEqual(arr.Length, img.Size);
 
-            for(var i = 0; i < img.Height; i++)
-            for (var j = 0; j < img.Width; j++)
-                Assert.IsTrue(img[i, j].AlmostEqual(img[i * img.Width + j]) &&
-                              img[i, j].AlmostEqual(arr[i * img.Width + j]));
+            for(var i = 0; i < img.Width; i++)
+            for (var j = 0; j < img.Height; j++)
+                Assert.IsTrue(img[i, j].AlmostEqual(img[i * img.Height + j]) &&
+                              img[i, j].AlmostEqual(arr[i * img.Height + j]));
         }
 
         [Test]
@@ -286,7 +286,7 @@ namespace Tests
                 arr[i] = _r.Next(-100_000, 100_000);
 
 
-            var img = new Image<int>(arr, 100, 400);
+            var img = Image.Create<int>(arr, 100, 400);
             Assert.AreEqual(((ISubImage)img).Min(), ((ISubImage)img).Percentile(0));
 
             Assert.AreEqual(((ISubImage)img).Max(), ((ISubImage)img).Percentile(100));
@@ -312,22 +312,21 @@ namespace Tests
         [Test]
         public void TestThrows()
         {
-            Assert.That(() => Image.Create<double>(null, 1, 1), Throws.ArgumentNullException);
-            Assert.That(() => Image.Create<char>((_) => { }, 1, 1), Throws.InstanceOf<NotSupportedException>());
-            Assert.That(() => Image.Create<int>((_) => { }, -1, 1), Throws.InstanceOf<ArgumentOutOfRangeException>());
-            Assert.That(() => Image.Create<int>((_) => { }, 1, -1), Throws.InstanceOf<ArgumentOutOfRangeException>());
+            Assert.That(() => Image.Create(null as Image.Initializer<double>, 1, 1), Throws.ArgumentNullException);
+            Assert.That(() => Image.Create<char>(_ => { }, 1, 1), Throws.InstanceOf<NotSupportedException>());
+            Assert.That(() => Image.Create<int>(_ => { }, -1, 1), Throws.InstanceOf<ArgumentOutOfRangeException>());
+            Assert.That(() => Image.Create<int>(_ => { }, 1, -1), Throws.InstanceOf<ArgumentOutOfRangeException>());
 
-            Assert.That(() => new Image<char>(ReadOnlySpan<char>.Empty, 1, 1), Throws.InstanceOf<NotSupportedException>());
-            Assert.That(() => new Image<char>(ReadOnlySpan<byte>.Empty, 1, 1), Throws.InstanceOf<NotSupportedException>());
+            Assert.That(() => Image.Create(ReadOnlySpan<char>.Empty, 1, 1), Throws.InstanceOf<NotSupportedException>());
+            Assert.That(() => Image.Create<char>(ReadOnlySpan<byte>.Empty, 1, 1), Throws.InstanceOf<NotSupportedException>());
 
-            Assert.That(() => new Image<int>(ReadOnlySpan<int>.Empty, -1, 1), Throws.InstanceOf<ArgumentOutOfRangeException>());
-            Assert.That(() => new Image<int>(ReadOnlySpan<int>.Empty,  1, -1), Throws.InstanceOf<ArgumentOutOfRangeException>());
-            Assert.That(() => new Image<int>(ReadOnlySpan<int>.Empty, 1, 1), Throws.ArgumentException);
+            Assert.That(() => Image.Create(ReadOnlySpan<int>.Empty, -1, 1), Throws.InstanceOf<ArgumentOutOfRangeException>());
+            Assert.That(() => Image.Create(ReadOnlySpan<int>.Empty,  1, -1), Throws.InstanceOf<ArgumentOutOfRangeException>());
 
 
-            Assert.That(() => new Image<int>(ReadOnlySpan<byte>.Empty, -1, 1), Throws.InstanceOf<ArgumentOutOfRangeException>());
-            Assert.That(() => new Image<int>(ReadOnlySpan<byte>.Empty, 1, -1), Throws.InstanceOf<ArgumentOutOfRangeException>());
-            Assert.That(() => new Image<int>(ReadOnlySpan<byte>.Empty, 1, 1), Throws.ArgumentException);
+            Assert.That(() => Image.Create<int>(ReadOnlySpan<byte>.Empty, -1, 1), Throws.InstanceOf<ArgumentOutOfRangeException>());
+            Assert.That(() => Image.Create<int>(ReadOnlySpan<byte>.Empty, 1, -1), Throws.InstanceOf<ArgumentOutOfRangeException>());
+            Assert.That(() => Image.Create<int>(new [] {1, 2, 3, 4}, 1, 1), Throws.ArgumentException);
 
         }
 
@@ -338,7 +337,7 @@ namespace Tests
             for (var i = 0; i < arr.Length; i++)
                 arr[i] = _r.Next(-100_000, 100_000);
 
-            var img = new Image<int>(arr, 400, 100);
+            var img = Image.Create<int>(arr, 400, 100);
 
             for (var i = 0; i < arr.Length; i++) 
                 Assert.AreEqual(img[i], img.DangerousGet(i));
