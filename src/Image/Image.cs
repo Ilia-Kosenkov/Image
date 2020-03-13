@@ -3,6 +3,7 @@ using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -67,6 +68,7 @@ namespace ImageCore
     }
 
     [Serializable]
+    [DebuggerDisplay("W:{Width} x H:{Height}")]
     public sealed class Image<T> : Image, IImage<T> 
         where T : unmanaged, IComparable<T>, IEquatable<T>
     {

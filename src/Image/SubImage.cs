@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 #if ALLOW_UNSAFE_IL_MATH
@@ -10,6 +11,7 @@ using static Internal.Numerics.MathOps;
 
 namespace ImageCore
 {
+    [DebuggerDisplay("{Size}")]
     public sealed class SubImage<T> : ISubImage<T>
         where T : unmanaged, IComparable<T>, IEquatable<T>
     {
