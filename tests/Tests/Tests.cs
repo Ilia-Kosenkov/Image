@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization.Formatters.Binary;
 using ImageCore;
 using NUnit.Framework;
@@ -244,9 +245,12 @@ namespace Tests
 
             var slice = img.Slice(x => true);
 
+            var max = img.GetView().ToArray().Max();
+
             Assert.AreEqual(img.Size, slice.Size);
-            Assert.AreEqual(img.Max(), slice.Max());
             Assert.AreEqual(img.Min(), slice.Min());
+            Assert.AreEqual(img.Max(), max);
+            Assert.AreEqual(img.Max(), slice.Max());
             Assert.AreEqual(img.Percentile(0.66), slice.Percentile(0.66));
             Assert.AreEqual(img.Average(), slice.Average());
             Assert.AreEqual(img.Var(), slice.Var());
@@ -358,6 +362,37 @@ namespace Tests
             for (var i = 0; i < arr.Length; i++) 
                 Assert.AreEqual(img[i], img.DangerousGet(i));
         }
+
+        [Test]
+        public void TestRotation()
+        {
+            var arr = new int[40_000];
+            for (var i = 0; i < arr.Length; i++)
+                arr[i] = _r.Next(-100_000, 100_000);
+
+            var img = Image.Create<int>(arr, 400, 100);
+
+            Assert.AreEqual(img, img.Rotate(RotationDegree.Zero));
+            Assert.AreNotEqual(img, img.Rotate(RotationDegree.Rotate90));
+            Assert.AreNotEqual(img, img.Rotate(RotationDegree.Rotate180));
+            Assert.AreNotEqual(img, img.Rotate(RotationDegree.Rotate270));
+
+            Assert.AreEqual(img, img
+                .Rotate(RotationDegree.Rotate90)
+                .Rotate(RotationDegree.Rotate90)
+                .Rotate(RotationDegree.Rotate90)
+                .Rotate(RotationDegree.Rotate90));
+            Assert.AreEqual(img, img
+                .Rotate(RotationDegree.Rotate270)
+                .Rotate(RotationDegree.Rotate270)
+                .Rotate(RotationDegree.Rotate270)
+                .Rotate(RotationDegree.Rotate270));
+            Assert.AreEqual(img, img.Rotate(RotationDegree.Rotate180).Rotate(RotationDegree.Rotate180));
+            
+            Assert.AreEqual(img.Rotate(RotationDegree.Rotate180), img.Rotate(RotationDegree.Rotate90).Rotate(RotationDegree.Rotate90));
+            Assert.AreEqual(img, img.Rotate(RotationDegree.Rotate90).Rotate(RotationDegree.Rotate270));
+            Assert.AreEqual(img, img.Rotate(RotationDegree.Rotate270).Rotate(RotationDegree.Rotate90));
+        }
     }
- 
+
 }
