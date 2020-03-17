@@ -101,8 +101,10 @@ namespace Tests
             var newIm = img.Transpose();
 
             Assert.False(img.Equals(newIm));
-            Assert.AreEqual(img[10, 20], newIm[20, 10]);
-            Assert.AreNotEqual(img[10, 20], newIm[10, 20]);
+
+            for(var i = 0; i < img.Height; i++)
+            for (var j = 0; j < img.Width; j++)
+                Assert.AreEqual(img[i, j], newIm[j, i]);
         }
 
         [Test]
@@ -169,16 +171,16 @@ namespace Tests
                 arr[i] = _r.Next(-100_000, 100_000);
 
 
-            var img = Image.Create<double>(arr, 100, 400);
+            var img = Image.Create<double>(arr, 400, 100);
 
             Assert.AreEqual(100, img.Width);
             Assert.AreEqual(400, img.Height);
             Assert.AreEqual(arr.Length, img.Size);
 
-            for(var i = 0; i < img.Width; i++)
-            for (var j = 0; j < img.Height; j++)
-                Assert.IsTrue(img[i, j].AlmostEqual(img[i * img.Height + j]) &&
-                              img[i, j].AlmostEqual(arr[i * img.Height + j]));
+            for(var i = 0; i < img.Height; i++)
+            for (var j = 0; j < img.Width; j++)
+                Assert.IsTrue(img[i, j].AlmostEqual(img[i * img.Width + j]) &&
+                              img[i, j].AlmostEqual(arr[i * img.Width + j]));
         }
 
         [Test]
