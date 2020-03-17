@@ -1,11 +1,53 @@
-﻿using System;
+﻿#nullable enable
+using System;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 
 namespace ImageCore.Internals
 {
     internal static class TransformationImplementation
     {
-        public static void Transpose<T>(ReadOnlySpan<T> source, Span<T> target, int height, int width)
+        public delegate int TargetSelector(int i, int j, int height, int width);
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int TransposeSelector(int i, int j, int height, int width)
+            => j * height + i;
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int RotationSelector0(int i, int j, int height, int width)
+            => i * width + j;
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int RotationSelector90(int i, int j, int height, int width)
+            => (width - 1 - j) * height + i;
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int RotationSelector180(int i, int j, int height, int width)
+            => width * height - 1 - (i * width + j);
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int RotationSelector270(int i, int j, int height, int width)
+            => j * height + (height - i - 1);
+
+        public static TargetSelector GetTransposeSelector() => TransposeSelector;
+
+        public static TargetSelector GetRotationSelector(RotationDegree degree)
+            => degree switch
+            {
+                RotationDegree.Zero => RotationSelector0,
+                RotationDegree.Rotate90 => RotationSelector90,
+                RotationDegree.Rotate180 => RotationSelector180,
+                RotationDegree.Rotate270 => RotationSelector270,
+                _ => throw new InvalidEnumArgumentException(nameof(degree), (int) degree, typeof(RotationDegree))
+            };
+
+
+        public static void Transform<T>(ReadOnlySpan<T> source, Span<T> target, int height, int width,
+            TargetSelector targetSelector)
         {
+            _ = targetSelector ??
+                throw new ArgumentNullException(nameof(targetSelector));
+
             if (target.Length < source.Length)
                 throw new ArgumentException(nameof(target));
             if (height < 0)
@@ -17,55 +59,8 @@ namespace ImageCore.Internals
 
             for (var i = 0; i < height; i++)
             for (var j = 0; j < width; j++)
-                target[j * height + i] = source[i * width + j];
+                target[targetSelector(i, j, height, width)] = source[i * width + j];
         }
 
-        public static void Rotate90<T>(ReadOnlySpan<T> source, Span<T> target, int height, int width)
-        {
-            if (target.Length < source.Length)
-                throw new ArgumentException(nameof(target));
-            if (height < 0)
-                throw new ArgumentException(nameof(height));
-            if (width < 0)
-                throw new ArgumentException(nameof(width));
-            if (target.Length < height * width)
-                throw new ArgumentException(nameof(target));
-
-            for (var i = 0; i < height; i++)
-            for (var j = 0; j < width; j++)
-                target[(width - 1 - j) * height + i] = source[i * width + j];
-        }
-
-        public static void Rotate180<T>(ReadOnlySpan<T> source, Span<T> target, int height, int width)
-        {
-            if (target.Length < source.Length)
-                throw new ArgumentException(nameof(target));
-            if (height < 0)
-                throw new ArgumentException(nameof(height));
-            if (width < 0)
-                throw new ArgumentException(nameof(width));
-            if (target.Length < height * width)
-                throw new ArgumentException(nameof(target));
-
-            for (var i = 0; i < height; i++)
-            for (var j = 0; j < width; j++)
-                target[width * height - 1 - (i * width + j)] = source[i * width + j];
-        }
-
-        public static void Rotate270<T>(ReadOnlySpan<T> source, Span<T> target, int height, int width)
-        {
-            if (target.Length < source.Length)
-                throw new ArgumentException(nameof(target));
-            if (height < 0)
-                throw new ArgumentException(nameof(height));
-            if (width < 0)
-                throw new ArgumentException(nameof(width));
-            if (target.Length < height * width)
-                throw new ArgumentException(nameof(target));
-
-            for (var i = 0; i < height; i++)
-            for (var j = 0; j < width; j++)
-                target[j * height + (height - i - 1)] = source[i * width + j];
-        }
     }
 }

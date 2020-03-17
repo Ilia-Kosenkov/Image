@@ -384,27 +384,32 @@ namespace ImageCore
         public IImage<T> Copy()
             => new Image<T>(_data, Height, Width);
 
-        public IImage<T> Transpose()
-        {
-            return new Image<T>(Width, Height, span =>
+        public IImage<T> Transpose() 
+            => new Image<T>(Width, Height, span =>
             {
-                TransformationImplementation.Transpose(_data, span, Height, Width);
+                TransformationImplementation.Transform(_data, span, Height, Width, TransformationImplementation.GetTransposeSelector());
             });
-        }
 
         public IImage<T> Rotate(RotationDegree degree)
         {
-            return degree switch
-            {
-                RotationDegree.Zero => Copy(),
-                RotationDegree.Rotate90 => new Image<T>(Width, Height,
-                    span => TransformationImplementation.Rotate90(_data, span, Height, Width)),
-                RotationDegree.Rotate180 => new Image<T>(Height, Width,
-                    span => TransformationImplementation.Rotate180(_data, span, Height, Width)),
-                RotationDegree.Rotate270 => new Image<T>(Width, Height,
-                    span => TransformationImplementation.Rotate270(_data, span, Height, Width)),
-                _ => throw new InvalidEnumArgumentException(nameof(degree), (int)degree, typeof(RotationDegree))
-            };
+            var (width, height) = degree == RotationDegree.Rotate90 || degree == RotationDegree.Rotate270
+                ? (Height, Width)
+                : (Width, Height);
+
+            return new Image<T>(height, width,
+                span => TransformationImplementation.Transform(_data, span, Height, Width,
+                    TransformationImplementation.GetRotationSelector(degree)));
+            //return degree switch
+            //{
+            //    RotationDegree.Zero => Copy(),
+            //    RotationDegree.Rotate90 => new Image<T>(Width, Height,
+            //        span => TransformationImplementation.Rotate90(_data, span, Height, Width)),
+            //    RotationDegree.Rotate180 => new Image<T>(Height, Width,
+            //        span => TransformationImplementation.Rotate180(_data, span, Height, Width)),
+            //    RotationDegree.Rotate270 => new Image<T>(Width, Height,
+            //        span => TransformationImplementation.Rotate270(_data, span, Height, Width)),
+            //    _ => throw new InvalidEnumArgumentException(nameof(degree), (int)degree, typeof(RotationDegree))
+            //};
         }
 
         public IImage<TOther> CastTo<TOther>() where TOther 
