@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 
 namespace ImageCore.Internals
 {
-    internal static class TransformationImplementation
+    internal static class ImageTransImpl
     {
         public delegate int TargetSelector(int i, int j, int height, int width);
         

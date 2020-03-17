@@ -387,7 +387,7 @@ namespace ImageCore
         public IImage<T> Transpose() 
             => new Image<T>(Width, Height, span =>
             {
-                TransformationImplementation.Transform(_data, span, Height, Width, TransformationImplementation.GetTransposeSelector());
+                ImageTransImpl.Transform(_data, span, Height, Width, ImageTransImpl.GetTransposeSelector());
             });
 
         public IImage<T> Rotate(RotationDegree degree)
@@ -397,14 +397,14 @@ namespace ImageCore
                 : (Width, Height);
 
             return new Image<T>(height, width,
-                span => TransformationImplementation.Transform(_data, span, Height, Width,
-                    TransformationImplementation.GetRotationSelector(degree)));
+                span => ImageTransImpl.Transform(_data, span, Height, Width,
+                    ImageTransImpl.GetRotationSelector(degree)));
         }
 
         public IImage<T> Flip(FlipDirection direction)
             => new Image<T>(Height, Width,
-                span => TransformationImplementation.Transform(_data, span, Height, Width,
-                    TransformationImplementation.GetFlipSelector(direction)));
+                span => ImageTransImpl.Transform(_data, span, Height, Width,
+                    ImageTransImpl.GetFlipSelector(direction)));
 
         public IImage<TOther> CastTo<TOther>() where TOther 
             : unmanaged, IComparable<TOther>, IEquatable<TOther>
