@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -392,6 +393,29 @@ namespace Tests
             Assert.AreEqual(img.Rotate(RotationDegree.Rotate180), img.Rotate(RotationDegree.Rotate90).Rotate(RotationDegree.Rotate90));
             Assert.AreEqual(img, img.Rotate(RotationDegree.Rotate90).Rotate(RotationDegree.Rotate270));
             Assert.AreEqual(img, img.Rotate(RotationDegree.Rotate270).Rotate(RotationDegree.Rotate90));
+        }
+
+        [Test]
+        public void TestFlipping()
+        {
+            var arr = new int[40_000];
+            for (var i = 0; i < arr.Length; i++)
+                arr[i] = _r.Next(-100_000, 100_000);
+
+            var img = Image.Create<int>(arr, 400, 100);
+
+            Assert.AreNotEqual(img, img.Flip(FlipDirection.Vertically));
+            Assert.AreNotEqual(img, img.Flip(FlipDirection.Horizontally));
+
+            Assert.AreEqual(img, img.Flip(FlipDirection.Horizontally).Flip(FlipDirection.Horizontally));
+            Assert.AreEqual(img, img.Flip(FlipDirection.Vertically).Flip(FlipDirection.Vertically));
+            Assert.AreEqual(img, img
+                .Flip(FlipDirection.Vertically)
+                .Flip(FlipDirection.Horizontally)
+                .Flip(FlipDirection.Vertically)
+                .Flip(FlipDirection.Horizontally));
+
+
         }
     }
 
