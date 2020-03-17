@@ -13,6 +13,7 @@ namespace ImageCore
         IImage Transpose();
 
         IImage Rotate(RotationDegree degree);
+        IImage Flip(FlipDirection direction);
 
         IImage Clamp(double low, double high);
 

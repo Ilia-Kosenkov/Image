@@ -18,6 +18,7 @@ namespace ImageCore
         IImage<T> Copy();
         new IImage<T> Transpose();
         new IImage<T> Rotate(RotationDegree degree);
+        new IImage<T> Flip(FlipDirection direction);
 
         IImage<TOther> CastTo<TOther>() 
             where TOther : unmanaged, IComparable<TOther>, IEquatable<TOther>;
@@ -42,6 +43,7 @@ namespace ImageCore
 
         IImage IImage.Transpose() => Transpose();
         IImage IImage.Rotate(RotationDegree degree) => Rotate(degree);
+        IImage IImage.Flip(FlipDirection direction) => Flip(direction);
         IImage IImage.Clamp(double low, double high) => Clamp(DangerousCast<double, T>(low), DangerousCast<double, T>(high));
 
         IImage IImage.Add(IImage other)

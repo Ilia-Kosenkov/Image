@@ -399,18 +399,12 @@ namespace ImageCore
             return new Image<T>(height, width,
                 span => TransformationImplementation.Transform(_data, span, Height, Width,
                     TransformationImplementation.GetRotationSelector(degree)));
-            //return degree switch
-            //{
-            //    RotationDegree.Zero => Copy(),
-            //    RotationDegree.Rotate90 => new Image<T>(Width, Height,
-            //        span => TransformationImplementation.Rotate90(_data, span, Height, Width)),
-            //    RotationDegree.Rotate180 => new Image<T>(Height, Width,
-            //        span => TransformationImplementation.Rotate180(_data, span, Height, Width)),
-            //    RotationDegree.Rotate270 => new Image<T>(Width, Height,
-            //        span => TransformationImplementation.Rotate270(_data, span, Height, Width)),
-            //    _ => throw new InvalidEnumArgumentException(nameof(degree), (int)degree, typeof(RotationDegree))
-            //};
         }
+
+        public IImage<T> Flip(FlipDirection direction)
+            => new Image<T>(Height, Width,
+                span => TransformationImplementation.Transform(_data, span, Height, Width,
+                    TransformationImplementation.GetFlipSelector(direction)));
 
         public IImage<TOther> CastTo<TOther>() where TOther 
             : unmanaged, IComparable<TOther>, IEquatable<TOther>
