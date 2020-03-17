@@ -8,6 +8,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
+using ImageCore.Internals;
 #if ALLOW_UNSAFE_IL_MATH
 using static Internal.UnsafeNumerics.MathOps;
 #else
@@ -309,14 +310,42 @@ namespace ImageCore
             return _median.Value;
         }
 
-        public T Average()
-        {
-            return DangerousCast<double, T>((this as ISubImage).Average());
-        }
-
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public T Var()
         {
-            return DangerousCast<double, T>((this as ISubImage).Var());
+            if (_var is null)
+            {
+                if (Size > 1)
+                {
+                    var avg = Average();
+                    var sum = 0.0;
+                    foreach (var item in _data)
+                    {
+                        var diff = DangerousCast<T, double>(DangerousSubtract(item, avg));
+
+                        sum += diff * diff;
+                    }
+
+                    _var = sum / (Size - 1);
+                }
+                else
+                    _var = 0.0;
+            }
+            return DangerousCast<double, T>(_var.Value);
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public T Average()
+        {
+            if (_average is null)
+            {
+                var sum = 0.0;
+                foreach (var item in _data)
+                    sum += DangerousCast<T, double>(item);
+
+                _average = sum / Size;
+            }
+            return DangerousCast<double, T>(_average.Value);
         }
 
 
@@ -334,10 +363,13 @@ namespace ImageCore
         {
             return new Image<T>(Width, Height, span =>
             {
-                for (var i = 0; i < Height; i++)
-                for (var j = 0; j < Width; j++)
-                    span[j * Height + i] = _data[i * Width + j];
+                RotationImplementation.Rotate90(_data, span, Height, Width);
             });
+        }
+
+        public IImage<T> Rotate(RotationDegree degree)
+        {
+            throw new NotImplementedException();
         }
 
         public IImage<TOther> CastTo<TOther>() where TOther 
@@ -493,6 +525,18 @@ namespace ImageCore
 
             return new SubImage<T>(this, indexes);
         }
+        public ISubImage<T> Slice(Range horizontal, Range vertical)
+        {
+            var x = horizontal.GetOffsetAndLength(Width);
+            var y = horizontal.GetOffsetAndLength(Height);
+
+            var result = new List<(int I, int J)>(x.Length * y.Length);
+            for (var i = x.Offset; i < x.Length; i++)
+            for (var j = y.Offset; j < y.Length; j++)
+                result.Add((i, j));
+
+            return Slice(result);
+        }
 
         public bool Equals(IImage<T> other)
         {
@@ -525,115 +569,6 @@ namespace ImageCore
         public object Clone() => Copy();
 
 
-#region IImage
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        IImage IImage.Add(IImage other)
-            => other is IImage<T> img
-                ? Add(img)
-                : throw new ArgumentException(nameof(other));
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        IImage IImage.Subtract(IImage other)
-            => other is IImage<T> img
-                ? Subtract(img)
-                : throw new ArgumentException(nameof(other));
-
-        ISubImage IImage.Slice(ICollection<(int I, int J)> pixels) 
-            => Slice(pixels);
-
-        ISubImage IImage.Slice(Func<double, bool> selector)
-        {
-            bool Func(T x) => selector(DangerousCast<T, double>(x));
-            return Slice(Func);
-        }
-
-        ISubImage IImage.Slice(Func<int, int, double, bool> selector)
-        {
-            bool Func(int i, int j, T x) => selector(i, j, DangerousCast<T, double>(x));
-            return Slice(Func);
-        }
-
-        public ISubImage Slice(Range horizontal, Range vertical)
-        {
-            var x = horizontal.GetOffsetAndLength(Width);
-            var y = horizontal.GetOffsetAndLength(Height);
-
-            var result = new List<(int I, int J)>(x.Length * y.Length);
-            for(var i = x.Offset; i < x.Length; i++)
-            for (var j = y.Offset; j < y.Length; j++)
-                result.Add((i, j));
-
-            return Slice(result);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        double ISubImage.Min()
-        {
-            return DangerousCast<T, double>(Min());
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        double ISubImage.Max()
-        {
-            return DangerousCast<T, double>(Max());
-        }
-
-        IImage IImage.Clamp(double low, double high)
-        {
-            return Clamp(DangerousCast<double, T>(low), DangerousCast<double, T>(high));
-        }
-
-        double ISubImage.Percentile(double lvl)
-        {
-            return DangerousCast<T, double>(Percentile(DangerousCast<double, T>(lvl)));
-        }
-
-        double ISubImage.Median()
-        {
-            return DangerousCast<T, double>(Median());
-        }
-
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        double ISubImage.Var()
-        {
-            if (!(_var is null)) return _var.Value;
-
-            if (Size > 1)
-            {
-                var avg = Average();
-                var sum = 0.0;
-                foreach(var item in _data)
-                { 
-                    var diff = DangerousCast<T, double>(DangerousSubtract(item, avg));
-
-                    sum += diff * diff;
-                }
-
-                _var = sum / (Size - 1);
-            }
-            else
-                _var = 0.0;
-
-            return _var.Value;
-        }
-
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        double ISubImage.Average()
-        {
-            if(_average is null)
-            {
-                var sum = 0.0;
-                foreach (var item in _data)
-                    sum += DangerousCast<T, double>(item);
-
-                _average = sum / Size;
-            }
-            return _average.Value;
-        }
-
-#endregion
-
         public IEnumerator<T> GetEnumerator()
             => (_data as IEnumerable<T>).GetEnumerator();
 
@@ -659,6 +594,7 @@ namespace ImageCore
 
         public static IImage<T> Zero(int height, int width)
             => new Image<T>(height, width);
+
 
     }
 }

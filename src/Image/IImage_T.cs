@@ -1,5 +1,9 @@
-﻿using System;
+﻿#nullable enable
+
+using System;
 using System.Collections.Generic;
+
+using static Internal.UnsafeNumerics.MathOps;
 
 namespace ImageCore
 {
@@ -12,7 +16,8 @@ namespace ImageCore
         ref readonly T DangerousGet(long pos);
 
         IImage<T> Copy();
-        IImage<T> Transpose();
+        new IImage<T> Transpose();
+        new IImage<T> Rotate(RotationDegree degree);
 
         IImage<TOther> CastTo<TOther>() 
             where TOther : unmanaged, IComparable<TOther>, IEquatable<TOther>;
@@ -31,5 +36,41 @@ namespace ImageCore
         new ISubImage<T> Slice(ICollection<(int I, int J)> indexes);
         ISubImage<T> Slice(Func<T, bool> selector);
         ISubImage<T> Slice(Func<int, int, T, bool> selector);
+        new ISubImage<T> Slice(Range horizontal, Range vertical);
+
+        #region IImage
+
+        IImage IImage.Transpose() => Transpose();
+        IImage IImage.Rotate(RotationDegree degree) => Rotate(degree);
+        IImage IImage.Clamp(double low, double high) => Clamp(DangerousCast<double, T>(low), DangerousCast<double, T>(high));
+
+        IImage IImage.Add(IImage other)
+            => other is IImage<T> img
+                ? Add(img)
+                : throw new ArgumentException(nameof(other));
+
+        IImage IImage.Subtract(IImage other)
+            => other is IImage<T> img
+                ? Subtract(img)
+                : throw new ArgumentException(nameof(other));
+
+        ISubImage IImage.Slice(Range horizontal, Range vertical) => Slice(horizontal, vertical);
+
+        ISubImage IImage.Slice(ICollection<(int I, int J)> pixels)
+            => Slice(pixels);
+        ISubImage IImage.Slice(Func<double, bool> selector)
+        {
+            bool Func(T x) => selector(DangerousCast<T, double>(x));
+            return Slice(Func);
+        }
+        ISubImage IImage.Slice(Func<int, int, double, bool> selector)
+        {
+            bool Func(int i, int j, T x) => selector(i, j, DangerousCast<T, double>(x));
+            return Slice(Func);
+        }
+
+     
+
+        #endregion
     }
 }

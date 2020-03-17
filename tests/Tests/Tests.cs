@@ -108,6 +108,20 @@ namespace Tests
         }
 
         [Test]
+        public void TestTransposeSuccessive()
+        {
+            var arr = new double[40_000];
+            for (var i = 0; i < arr.Length; i++)
+                arr[i] = _r.Next(-100_000, 100_000);
+
+
+            var img = Image.Create<double>(arr, 400, 100);
+
+            Assert.AreNotEqual(img, img.Transpose());
+            Assert.AreEqual(img, img.Transpose().Transpose());
+        }
+
+        [Test]
         public void TestMath()
         {
             var arr = new double[40_000];
