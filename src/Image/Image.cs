@@ -3,6 +3,7 @@ using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -285,7 +286,7 @@ namespace ImageCore
                 return Min();
             if (DangerousEquals(lvl, hund))
                 return Max();
-
+            
             // ceil(lvl * width * height / 100)
             var len = (int) Math.Ceiling(
                 DangerousCast<T, double>(
@@ -293,10 +294,24 @@ namespace ImageCore
                             lvl, 
                             DangerousCast<int, T>(Width * Height))) / 100.0);
 
+            if(len > Width * Height)
+                throw new InvalidOperationException("Should not happen.");
+
             if (len < 1)
                 len = 1;
 
-            return _data.OrderBy(x => x, Comparer<T>.Default).Skip(len - 1).First();
+            var buff = ArrayPool<T>.Shared.Rent(Width * Height);
+            try
+            {
+                _data.CopyTo(buff.AsSpan(0, Width * Height));
+                Array.Sort(buff, 0, Width * Height);
+
+                return buff[len - 1];
+            }
+            finally
+            {
+                ArrayPool<T>.Shared.Return(buff);
+            }
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -317,15 +332,18 @@ namespace ImageCore
             {
                 if (Size > 1)
                 {
+                    var len = _data.Length;
                     var avg = Average();
-                    var sum = 0.0;
-                    foreach (var item in _data)
-                    {
-                        var diff = DangerousCast<T, double>(DangerousSubtract(item, avg));
+                    ref readonly var item = ref MemoryMarshal.GetReference((ReadOnlySpan<T>) _data);
+                    var sum = DangerousCast<T, double>(DangerousSubtract(item, avg));
+                    sum *= sum;
 
+                    for (var i = 1; i < len; i++)
+                    {
+                        item = ref Unsafe.Add(ref Unsafe.AsRef(item), 1);
+                        var diff = DangerousCast<T, double>(DangerousSubtract(item, avg));
                         sum += diff * diff;
                     }
-
                     _var = sum / (Size - 1);
                 }
                 else
@@ -339,10 +357,17 @@ namespace ImageCore
         {
             if (_average is null)
             {
-                var sum = 0.0;
-                foreach (var item in _data)
-                    sum += DangerousCast<T, double>(item);
+                var len = _data.Length;
+                ref readonly var item = ref MemoryMarshal.GetReference((ReadOnlySpan<T>)_data);
 
+                var sum = DangerousCast<T, double>(item);
+
+                for (var i = 1; i < len; i++)
+                {
+                    item = ref Unsafe.Add(ref Unsafe.AsRef(item), 1);
+                    sum += DangerousCast<T, double>(item);
+                }
+                
                 _average = sum / Size;
             }
             return DangerousCast<double, T>(_average.Value);
@@ -363,13 +388,23 @@ namespace ImageCore
         {
             return new Image<T>(Width, Height, span =>
             {
-                RotationImplementation.Rotate90(_data, span, Height, Width);
+                TransformationImplementation.Transpose(_data, span, Height, Width);
             });
         }
 
         public IImage<T> Rotate(RotationDegree degree)
         {
-            throw new NotImplementedException();
+            return degree switch
+            {
+                RotationDegree.Zero => Copy(),
+                RotationDegree.Rotate90 => new Image<T>(Width, Height,
+                    span => TransformationImplementation.Rotate90(_data, span, Height, Width)),
+                RotationDegree.Rotate180 => new Image<T>(Height, Width,
+                    span => TransformationImplementation.Rotate180(_data, span, Height, Width)),
+                RotationDegree.Rotate270 => new Image<T>(Width, Height,
+                    span => TransformationImplementation.Rotate270(_data, span, Height, Width)),
+                _ => throw new InvalidEnumArgumentException(nameof(degree), (int)degree, typeof(RotationDegree))
+            };
         }
 
         public IImage<TOther> CastTo<TOther>() where TOther 
@@ -577,7 +612,7 @@ namespace ImageCore
                && Equals(other);
 
         public override int GetHashCode()
-            => (int) unchecked((Internals.CRC32Generator.ComputeHash<T>(_data) * 31 + (uint) Width) * 31 + (uint) Height);
+            => (int) unchecked((CRC32Generator.ComputeHash<T>(_data) * 31 + (uint) Width) * 31 + (uint) Height);
 
         IEnumerator IEnumerable.GetEnumerator()
         {
