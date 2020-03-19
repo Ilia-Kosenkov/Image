@@ -1,8 +1,6 @@
 ﻿using System;
-using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Runtime.Serialization.Formatters.Binary;
 using ImageCore;
 using NUnit.Framework;
@@ -45,7 +43,7 @@ namespace Tests
             Assert.AreEqual(arr.Min(), img.Min());
             Assert.AreEqual(arr.Max(), img.Max());
             Assert.AreEqual(arr.Min(), ((ISubImage) img).Min(), 1e-16);
-            Assert.AreEqual(arr.Max(), ((ISubImage)img).Max(), 1e-16);
+            Assert.AreEqual(arr.Max(), ((ISubImage) img).Max(), 1e-16);
 
         }
 
@@ -62,8 +60,8 @@ namespace Tests
             var min = img.Min();
             var max = img.Max();
 
-            var newMin = (int)(min + 0.1 * Math.Abs(min));
-            var newMax = (int)(max - 0.1 * Math.Abs(max));
+            var newMin = (int) (min + 0.1 * Math.Abs(min));
+            var newMax = (int) (max - 0.1 * Math.Abs(max));
 
             var newIm = img.Clamp(newMin, newMax);
 
@@ -104,7 +102,7 @@ namespace Tests
 
             Assert.False(img.Equals(newIm));
 
-            for(var i = 0; i < img.Height; i++)
+            for (var i = 0; i < img.Height; i++)
             for (var j = 0; j < img.Width; j++)
                 Assert.AreEqual(img[i, j], newIm[j, i]);
         }
@@ -132,7 +130,7 @@ namespace Tests
 
 
             var img = Image.Create<double>(arr, 200, 200);
-            
+
             Assume.That(img.Equals(Image<double>.Zero(img.Height, img.Width)), Is.False);
 
             var newIm = ((IImage) img).Subtract(img);
@@ -193,7 +191,7 @@ namespace Tests
             Assert.AreEqual(400, img.Height);
             Assert.AreEqual(arr.Length, img.Size);
 
-            for(var i = 0; i < img.Height; i++)
+            for (var i = 0; i < img.Height; i++)
             for (var j = 0; j < img.Width; j++)
                 Assert.IsTrue(img[i, j].AlmostEqual(img[i * img.Width + j]) &&
                               img[i, j].AlmostEqual(arr[i * img.Width + j]));
@@ -230,11 +228,12 @@ namespace Tests
             Assert.IsTrue(img.BitwiseEquals(other));
 
             Assert.IsFalse(img.Equals((object) null));
-            Assert.IsFalse(img.Equals((IImage)null));
+            Assert.IsFalse(img.Equals((IImage) null));
             Assert.IsFalse(img.Equals(null));
             Assert.IsFalse(img.BitwiseEquals(null));
 
         }
+
         [Test]
         public void TestFullSlice()
         {
@@ -271,7 +270,7 @@ namespace Tests
             var min = img.Min();
 
             var slice = img.Slice(x => x == max);
-            
+
             Assert.AreEqual(img.Max(), slice.Max());
             Assert.AreEqual(slice.Max(), slice.Min());
             Assert.AreEqual(max, slice[0]);
@@ -284,14 +283,14 @@ namespace Tests
             slice = img.Slice(x => x == min || x == max);
             Assert.AreEqual(img.Min(), slice.Min());
             Assert.AreEqual(img.Max(), slice.Max());
-            Assert.AreEqual(((ISubImage)img).Min(), ((ISubImage)slice).Min());
-            Assert.AreEqual(((ISubImage)img).Max(), ((ISubImage)slice).Max());
+            Assert.AreEqual(((ISubImage) img).Min(), ((ISubImage) slice).Min());
+            Assert.AreEqual(((ISubImage) img).Max(), ((ISubImage) slice).Max());
 
             slice = img.Slice((i, j, _) => (i + j) > 0);
 
             Assert.AreEqual(img.Average(), slice.Average(), 5);
             Assert.AreEqual(
-                img.Var(), 
+                img.Var(),
                 slice.Var(), 5e2);
 
         }
@@ -308,14 +307,14 @@ namespace Tests
 
 
             var img = Image.Create<int>(arr, 100, 400);
-            Assert.AreEqual(((ISubImage)img).Min(), ((ISubImage)img).Percentile(0));
+            Assert.AreEqual(((ISubImage) img).Min(), ((ISubImage) img).Percentile(0));
 
-            Assert.AreEqual(((ISubImage)img).Max(), ((ISubImage)img).Percentile(100));
-            var med1 = img.Percentile((int)(100 * p));
+            Assert.AreEqual(((ISubImage) img).Max(), ((ISubImage) img).Percentile(100));
+            var med1 = img.Percentile((int) (100 * p));
 
             var med2 = arr.OrderBy(x => x).Skip((int) (p * img.Size) - 1).First();
             Assert.AreEqual(med2, med1);
-            Assert.AreEqual(((ISubImage)img).Median(), ((ISubImage) img).Median());
+            Assert.AreEqual(((ISubImage) img).Median(), ((ISubImage) img).Median());
         }
 
         [Test]
@@ -339,15 +338,20 @@ namespace Tests
             Assert.That(() => Image.Create<int>(_ => { }, 1, -1), Throws.InstanceOf<ArgumentOutOfRangeException>());
 
             Assert.That(() => Image.Create(ReadOnlySpan<char>.Empty, 1, 1), Throws.InstanceOf<NotSupportedException>());
-            Assert.That(() => Image.Create<char>(ReadOnlySpan<byte>.Empty, 1, 1), Throws.InstanceOf<NotSupportedException>());
+            Assert.That(() => Image.Create<char>(ReadOnlySpan<byte>.Empty, 1, 1),
+                Throws.InstanceOf<NotSupportedException>());
 
-            Assert.That(() => Image.Create(ReadOnlySpan<int>.Empty, -1, 1), Throws.InstanceOf<ArgumentOutOfRangeException>());
-            Assert.That(() => Image.Create(ReadOnlySpan<int>.Empty,  1, -1), Throws.InstanceOf<ArgumentOutOfRangeException>());
+            Assert.That(() => Image.Create(ReadOnlySpan<int>.Empty, -1, 1),
+                Throws.InstanceOf<ArgumentOutOfRangeException>());
+            Assert.That(() => Image.Create(ReadOnlySpan<int>.Empty, 1, -1),
+                Throws.InstanceOf<ArgumentOutOfRangeException>());
 
 
-            Assert.That(() => Image.Create<int>(ReadOnlySpan<byte>.Empty, -1, 1), Throws.InstanceOf<ArgumentOutOfRangeException>());
-            Assert.That(() => Image.Create<int>(ReadOnlySpan<byte>.Empty, 1, -1), Throws.InstanceOf<ArgumentOutOfRangeException>());
-            Assert.That(() => Image.Create<int>(new [] {1, 2, 3, 4}, 1, 1), Throws.ArgumentException);
+            Assert.That(() => Image.Create<int>(ReadOnlySpan<byte>.Empty, -1, 1),
+                Throws.InstanceOf<ArgumentOutOfRangeException>());
+            Assert.That(() => Image.Create<int>(ReadOnlySpan<byte>.Empty, 1, -1),
+                Throws.InstanceOf<ArgumentOutOfRangeException>());
+            Assert.That(() => Image.Create<int>(new[] {1, 2, 3, 4}, 1, 1), Throws.ArgumentException);
 
         }
 
@@ -360,7 +364,7 @@ namespace Tests
 
             var img = Image.Create<int>(arr, 400, 100);
 
-            for (var i = 0; i < arr.Length; i++) 
+            for (var i = 0; i < arr.Length; i++)
                 Assert.AreEqual(img[i], img.DangerousGet(i));
         }
 
@@ -389,8 +393,9 @@ namespace Tests
                 .Rotate(RotationDegree.Rotate270)
                 .Rotate(RotationDegree.Rotate270));
             Assert.AreEqual(img, img.Rotate(RotationDegree.Rotate180).Rotate(RotationDegree.Rotate180));
-            
-            Assert.AreEqual(img.Rotate(RotationDegree.Rotate180), img.Rotate(RotationDegree.Rotate90).Rotate(RotationDegree.Rotate90));
+
+            Assert.AreEqual(img.Rotate(RotationDegree.Rotate180),
+                img.Rotate(RotationDegree.Rotate90).Rotate(RotationDegree.Rotate90));
             Assert.AreEqual(img, img.Rotate(RotationDegree.Rotate90).Rotate(RotationDegree.Rotate270));
             Assert.AreEqual(img, img.Rotate(RotationDegree.Rotate270).Rotate(RotationDegree.Rotate90));
         }
@@ -414,9 +419,21 @@ namespace Tests
                 .Flip(FlipDirection.Horizontally)
                 .Flip(FlipDirection.Vertically)
                 .Flip(FlipDirection.Horizontally));
+        }
 
+        [Test]
+        public void TestArrays()
+        {
+            var arr = new int[400, 100];
+            for (var i = 0; i < arr.GetLength(0); i++)
+                for (var j = 0; j < arr.GetLength(1); j++)
+                arr[i, j] = _r.Next(-100_000, 100_000);
 
+            var img = Image.Create(arr);
+
+            for (var i = 0; i < img.Height; i++)
+            for (var j = 0; j < img.Width; j++)
+                Assert.AreEqual(img[i, j], arr[i, j]);
         }
     }
-
 }
