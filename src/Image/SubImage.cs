@@ -1,7 +1,8 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
 #if ALLOW_UNSAFE_IL_MATH
 using static Internal.UnsafeNumerics.MathOps;
@@ -11,12 +12,12 @@ using static Internal.Numerics.MathOps;
 
 namespace ImageCore
 {
-    [DebuggerDisplay("{Size}")]
+    [DebuggerDisplay("{" + nameof(Size) + "}")]
     public sealed class SubImage<T> : ISubImage<T>
         where T : unmanaged, IComparable<T>, IEquatable<T>
     {
         private readonly IImage<T> _sourceImage;
-        private readonly List<(int I, int J)> _indexes;
+        private readonly ImmutableArray<(int I, int J)> _indexes;
 
         private T? _max;
         private T? _min;
@@ -24,21 +25,23 @@ namespace ImageCore
         private double? _var;
         private T? _median;
 
-        public long Size => _indexes.Count;
+        public long Size => _indexes.Length;
 
-        public T this[long index]
+        public T this[int index]
         {
             get
             {
                 if (index < 0 || index >= Size)
                     throw new ArgumentOutOfRangeException(nameof(index));
-                var (i, j) = _indexes[(int)index];
+                var (i, j) = _indexes[index];
 
                 return _sourceImage[i, j];
             }
         }
 
-        internal SubImage(IImage<T> source, ICollection<(int I, int J)> indexCollection)
+        public T this[Index i] => this[i.GetOffset(_indexes.Length)];
+
+        internal SubImage(IImage<T> source, IReadOnlyCollection<(int I, int J)> indexCollection)
         {
             _sourceImage = source ?? throw new ArgumentNullException(nameof(source));
             if (indexCollection is null)
@@ -46,7 +49,14 @@ namespace ImageCore
             if (indexCollection.Count == 0)
                 throw new ArgumentException(nameof(indexCollection));
 
-            _indexes = indexCollection.ToList();
+            _indexes = indexCollection.ToImmutableArray();
+            foreach (ref readonly var item in _indexes.AsSpan())
+            {
+                if (item.I < 0 || item.I > source.Height)
+                    throw new ArgumentOutOfRangeException(nameof(indexCollection), item, nameof(item.I));
+                if (item.J < 0 || item.J > source.Width)
+                    throw new ArgumentOutOfRangeException(nameof(indexCollection), item, nameof(item.J));
+            }
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -113,12 +123,25 @@ namespace ImageCore
                         lvl,
                         DangerousCast<long, T>(Size))) / 100.0);
 
+
             if (len < 1)
                 len = 1;
 
-            return _indexes.Select(x => _sourceImage[x.I, x.J])
-                .OrderBy(x => x, Comparer<T>.Default)
-                .Skip(len - 1).First();
+            var idxLen = _indexes.Length;
+            var buff = ArrayPool<T>.Shared.Rent(idxLen);
+            try
+            {
+                for (var i = 0; i < idxLen; i++)
+                    buff[i] = _sourceImage[_indexes[i]];
+
+                Array.Sort(buff, 0, idxLen);
+
+                return buff[len - 1];
+            }
+            finally
+            {
+                ArrayPool<T>.Shared.Return(buff);
+            }
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -129,59 +152,45 @@ namespace ImageCore
 
             return _median.Value;
         }
-        public T Average() 
-            => DangerousCast<double, T>((this as ISubImage).Average());
-
-        public T Var() 
-            => DangerousCast<double, T>((this as ISubImage).Var());
-
-        double ISubImage.Min()
-            => DangerousCast<T, double>(Min());
-        double ISubImage.Max()
-            => DangerousCast<T, double>(Max());
-
-        double ISubImage.Median() 
-            => DangerousCast<T, double>(Median());
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        double ISubImage.Var()
-        {
-            if (_var is null)
-            {
-                if (Size > 1)
-                {
-                    var avg = Average();
-                    var sum = 0.0;
-                    foreach (var item in _indexes.Select(x => _sourceImage[x.I, x.J]))
-                    {
-                        var diff = DangerousCast<T, double>(DangerousSubtract(item, avg));
-                        sum += diff * diff;
-                    }
-
-                    _var = sum / (Size - 1);
-                }
-                else
-                    _var = 0.0;
-            }
-
-            return _var.Value;
-        }
-
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        double ISubImage.Average()
+        public T Average()
         {
             if (_average is null)
             {
                 var sum = 0.0;
-                foreach (var item in _indexes.Select(x => _sourceImage[x.I, x.J]))
-                    sum += DangerousCast<T, double>(item);
+                foreach (var (i, j) in _indexes)
+                    sum += DangerousCast<T, double>(_sourceImage[i, j]);
+                
                 _average = sum / Size;
             }
-            return _average.Value;
+            return DangerousCast<double, T>(_average.Value);
         }
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public T Var()
+        {
+            // ReSharper disable once PossibleInvalidOperationException
+            if (_var is {}) return DangerousCast<double, T>(_var.Value);
+            if (Size > 1)
+            {
+                var avg = Average();
+                var sum = 0.0;
+                foreach (var (i, j) in _indexes)
+                {
+                    var val = _sourceImage[i, j];
 
-        public double Percentile(double lvl) 
-            => DangerousCast<T, double>(Percentile(DangerousCast<double, T>(lvl)));
+                    var diff = DangerousCast<T, double>(DangerousSubtract(val, avg));
+                    sum += diff * diff;
+                }
+
+                _var = sum / (Size - 1);
+            }
+            else
+                _var = 0.0;
+
+            return DangerousCast<double, T>(_var.Value);
+        }
+      
     }
 }

@@ -2,7 +2,7 @@
 
 using System;
 using System.Collections.Generic;
-
+using System.Collections.Immutable;
 using static Internal.UnsafeNumerics.MathOps;
 
 namespace ImageCore
@@ -12,7 +12,7 @@ namespace ImageCore
     {
         T this[int i, int j] { get; }
         T this[Index i, Index j] { get; }
-
+        T this[(int I, int J) index] => this[index.I, index.J];
         ref readonly T DangerousGet(long pos);
 
         IImage<T> Copy();
@@ -34,7 +34,7 @@ namespace ImageCore
         IImage<T> Add(IImage<T> other);
         IImage<T> Subtract(IImage<T> other);
 
-        new ISubImage<T> Slice(ICollection<(int I, int J)> indexes);
+        new ISubImage<T> Slice(IImmutableList<(int I, int J)> indexes);
         ISubImage<T> Slice(Func<T, bool> selector);
         ISubImage<T> Slice(Func<int, int, T, bool> selector);
         new ISubImage<T> Slice(Range horizontal, Range vertical);
@@ -58,7 +58,7 @@ namespace ImageCore
 
         ISubImage IImage.Slice(Range horizontal, Range vertical) => Slice(horizontal, vertical);
 
-        ISubImage IImage.Slice(ICollection<(int I, int J)> pixels)
+        ISubImage IImage.Slice(IImmutableList<(int I, int J)> pixels)
             => Slice(pixels);
         ISubImage IImage.Slice(Func<double, bool> selector)
         {

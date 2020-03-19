@@ -1,4 +1,6 @@
-﻿using System;
+﻿#nullable enable
+
+using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -63,7 +65,7 @@ namespace ImageCore.Internals
             for (var i = 1; i < size + 1; i++)
             {
                 if ((value & 1) != 0)
-                    result |= (1u << (size - i));
+                    result |= 1u << (size - i);
                 value >>= 1;
             }
 

@@ -1,9 +1,10 @@
-﻿using System;
+﻿#nullable enable
+
+using System;
 using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -35,7 +36,7 @@ namespace ImageCore
                 typeof(long),
                 typeof(int),
                 typeof(short),
-                typeof(sbyte),
+                typeof(sbyte)
             }.ToImmutableList();
         private protected static void ThrowIfTypeMismatch<T>()
         {
@@ -67,10 +68,20 @@ namespace ImageCore
             return new Image<T>(data, height, width);
         }
 
+        public static IImage<T> Create<T>(T[,] data)
+            where T : unmanaged, IComparable<T>, IEquatable<T>
+        {
+            _ = data ?? throw new ArgumentNullException(nameof(data));
+            var (height, width) = (data.GetLength(0), data.GetLength(1));
+            var view = MemoryMarshal.CreateReadOnlySpan(ref data[0, 0], data.Length);
+
+            return new Image<T>(view, height, width);
+        }
+
     }
 
     [Serializable]
-    [DebuggerDisplay("W:{Width} x H:{Height}")]
+    [DebuggerDisplay("W:{" + nameof(Width) + "} x H:{" + nameof(Height) + "}")]
     public sealed class Image<T> : Image, IImage<T> 
         where T : unmanaged, IComparable<T>, IEquatable<T>
     {
@@ -98,10 +109,13 @@ namespace ImageCore
 
         public T this[Index i, Index j] =>
             this[i.GetOffset(Width), j.GetOffset(Height)];
+        public T this[(int I, int J) index] => this[index.I, index.J];
 
-        public T this[long i] => i < 0 || i >= Size
+        public T this[int i] => i < 0 || i >= Size
             ? throw new ArgumentOutOfRangeException(nameof(i))
             : _data[i];
+
+        public T this[Index i] => this[i.GetOffset(Width * Height)];
 
         internal Image(int height, int width)
         {
@@ -251,6 +265,8 @@ namespace ImageCore
                         temp = item;
 
                 _max = temp;
+
+                return _max.Value;
             }
 
             return _max.Value;
@@ -529,7 +545,7 @@ namespace ImageCore
             return new Image<T>(span, Height, Width);
         }
 
-        public ISubImage<T> Slice(ICollection<(int I, int J)> indexes) 
+        public ISubImage<T> Slice(IImmutableList<(int I, int J)> indexes) 
             => new SubImage<T>(this, indexes);
 
         public ISubImage<T> Slice(Func<T, bool> selector)
@@ -561,15 +577,15 @@ namespace ImageCore
         }
         public ISubImage<T> Slice(Range horizontal, Range vertical)
         {
-            var x = horizontal.GetOffsetAndLength(Width);
-            var y = horizontal.GetOffsetAndLength(Height);
+            var x = horizontal.GetOffsetAndLength(Height);
+            var y = horizontal.GetOffsetAndLength(Width);
 
             var result = new List<(int I, int J)>(x.Length * y.Length);
             for (var i = x.Offset; i < x.Length; i++)
             for (var j = y.Offset; j < y.Length; j++)
                 result.Add((i, j));
 
-            return Slice(result);
+            return Slice(result.ToImmutableList());
         }
 
         public bool Equals(IImage<T> other)
