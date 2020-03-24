@@ -6,7 +6,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
@@ -24,7 +23,7 @@ namespace ImageCore
         public delegate void Initializer<T>(Span<T> span)
             where T : unmanaged, IComparable<T>, IEquatable<T>;
 
-        public static IImmutableList<Type> AllowedTypes { get; } =
+        public static ImmutableArray<Type> AllowedTypes { get; } =
             new[] 
             {
                 typeof(double),
@@ -37,11 +36,58 @@ namespace ImageCore
                 typeof(int),
                 typeof(short),
                 typeof(sbyte)
-            }.ToImmutableList();
-        private protected static void ThrowIfTypeMismatch<T>()
+            }.ToImmutableArray();
+
+        private protected static void ThrowIfTypeMismatch<T>() where T : unmanaged
         {
-            if (!AllowedTypes.Contains(typeof(T)))
+            if (!IsTypeAllowed<T>())
                 throw new NotSupportedException(typeof(T).ToString());
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsTypeAllowed<T>() where T : unmanaged 
+            => default(T) switch
+            {
+                double {} => true,
+                float {} => true,
+                ulong {} => true,
+                uint {} => true,
+                ushort {} => true,
+                byte {} => true,
+                long {} => true,
+                int {} => true,
+                short {} => true,
+                sbyte {} => true,
+                _ => false
+            };
+
+        public static bool IsTypeAllowed(Type type)
+        {
+            if (type is null)
+                return false;
+
+            if(type == typeof(double))
+				return true;
+            if(type == typeof(float))
+				return true;
+            if(type == typeof(ulong))
+				return true;
+            if(type == typeof(uint))
+				return true;
+            if(type == typeof(ushort))
+				return true;
+            if(type == typeof(byte))
+				return true;
+            if(type == typeof(long))
+				return true;
+            if(type == typeof(int))
+				return true;
+            if(type == typeof(short))
+				return true;
+            if(type == typeof(sbyte))
+				return true;
+
+            return false;
         }
 
         public static IImage<T> Create<T>(Initializer<T> init, int height, int width)
