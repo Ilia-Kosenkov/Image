@@ -167,8 +167,7 @@ namespace ImageCore
             _data = new T[width * height];
             Width = width;
             Height = height;
-
-            filler(Unsafe.As<T[], byte[]>(ref _data));
+            filler(MemoryMarshal.CreateSpan(ref Unsafe.As<T, byte>(ref _data[0]), _data.Length * Unsafe.SizeOf<T>()));
         }
 
         internal Image(ReadOnlySpan<T> data, int height, int width)
